@@ -3,112 +3,537 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAFR // NEXT-GEN AUTONOMOUS TELEMETRY</title>
+    <title>SAFR // AUTONOMOUS TELEMETRY</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-</head>
-<body class="bg-[#050505] text-zinc-100 antialiased selection:bg-yellow-400 selection:text-black overflow-x-hidden">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* === CORE SYSTEM STYLES === */
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-volt: #ccff00;
+            --bg-dark: #050505;
+        }
 
-    <div id="cursor">
-        <div class="cursor-dot"></div>
-        <div class="cursor-ring"></div>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+            cursor: none; /* Custom cursor */
+        }
+
+        /* Hide scrollbar for cinematic feel but keep native scrolling */
+        ::-webkit-scrollbar { display: none; }
+        html { scrollbar-width: none; }
+
+        /* === TYPOGRAPHY === */
+        .font-display { font-family: 'Syncopate', sans-serif; }
+        .text-outline {
+            color: transparent;
+            -webkit-text-stroke: 1px rgba(255, 255, 255, 0.2);
+            transition: -webkit-text-stroke 0.3s ease;
+        }
+        .text-outline:hover {
+            -webkit-text-stroke: 1px var(--neon-cyan);
+        }
+
+        /* === BACKGROUND & OVERLAYS === */
+        #webgl-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+            opacity: 0.04;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* === CONTENT LAYER === */
+        #main-content {
+            position: relative;
+            z-index: 10;
+        }
+
+        /* === CUSTOM CURSOR === */
+        #cursor-dot {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            background: var(--neon-cyan);
+            border-radius: 50%;
+            top: 0; left: 0;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            pointer-events: none;
+            mix-blend-mode: difference;
+        }
+        #cursor-ring {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--neon-cyan);
+            border-radius: 50%;
+            top: 0; left: 0;
+            transform: translate(-50%, -50%);
+            z-index: 9998;
+            pointer-events: none;
+            transition: width 0.2s, height 0.2s, background-color 0.2s;
+        }
+
+        /* === PRELOADER === */
+        #preloader {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-bar {
+            width: 0%;
+            height: 2px;
+            background: var(--neon-cyan);
+            margin-top: 20px;
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        /* === KINETIC ELEMENTS === */
+        .marquee-container {
+            width: 100vw;
+            overflow: hidden;
+            white-space: nowrap;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 2vh 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+        .marquee-text {
+            display: inline-block;
+            font-size: 5vw;
+            font-family: 'Syncopate', sans-serif;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding-right: 50px;
+        }
+
+        /* === GLITCH BUTTON === */
+        .btn-glitch {
+            position: relative;
+            background: transparent;
+            color: var(--neon-cyan);
+            font-family: 'Syncopate', sans-serif;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 15px 30px;
+            border: 1px solid var(--neon-cyan);
+            overflow: hidden;
+            transition: 0.3s ease;
+            cursor: none;
+        }
+        .btn-glitch:hover {
+            background: var(--neon-cyan);
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+        }
+
+        .clip-box {
+            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="cursor-dot"></div>
+    <div id="cursor-ring"></div>
+
+    <div id="preloader">
+        <div class="font-display text-2xl tracking-widest animate-pulse" style="color: var(--neon-cyan);">SAFR.OS // BOOTING</div>
+        <div class="w-64 bg-zinc-900 mt-4 h-[2px]">
+            <div class="loading-bar"></div>
+        </div>
+        <div id="loading-text" class="mt-4 text-xs font-mono text-zinc-500 uppercase tracking-widest">Compiling Edge Nodes...</div>
     </div>
 
-    <div id="canvas-container"></div>
+    <canvas id="webgl-canvas"></canvas>
+    <div class="noise-overlay"></div>
 
-    <div class="scanlines pointer-events-none fixed inset-0 z-50"></div>
-
-    <nav class="fixed top-0 w-full z-40 px-6 md:px-12 py-6 flex justify-between items-center mix-blend-difference">
-        <div class="flex items-center space-x-6">
-            <a href="#" class="nav-link font-bold tracking-tighter text-lg uppercase font-mono tracking-widest text-white">SF_R // Systems</a>
-            <span class="hidden lg:inline-block font-mono text-[10px] text-zinc-500 uppercase tracking-widest border border-zinc-800 px-3 py-1 bg-black/40">SYS_STATUS: ACTIVE</span>
+    <nav class="fixed top-0 w-full z-50 p-6 md:p-10 flex justify-between items-center mix-blend-difference">
+        <div class="font-display font-bold text-xl tracking-tighter text-white hover:text-[#00f3ff] transition-colors duration-300">
+            SAFR<span class="text-[#00f3ff]">_</span>
         </div>
-        <div class="hidden md:flex gap-10 font-mono text-xs tracking-widest text-zinc-400 uppercase">
-            <a href="#gap" class="nav-link hover:text-yellow-400 transition-colors py-1">// THE_GAP</a>
-            <a href="#engineering" class="nav-link hover:text-yellow-400 transition-colors py-1">// ENGINE_CORE</a>
-            <a href="#metrics" class="nav-link hover:text-yellow-400 transition-colors py-1">// METRIC_LOGS</a>
+        <div class="hidden md:flex gap-12 font-bold tracking-widest text-xs uppercase">
+            <a href="#engineering" class="hover-target hover:text-[#00f3ff] transition-colors">Engineering</a>
+            <a href="#validation" class="hover-target hover:text-[#ccff00] transition-colors">Validation</a>
         </div>
-        <button id="trigger-overlay" class="btn-magnetic font-mono text-xs uppercase bg-yellow-400 text-black px-6 py-3 font-bold transition-transform tracking-widest hover:bg-white">
-            INIT_TRIAL
-        </button>
+        <button class="hover-target btn-glitch">INIT_PILOT</button>
     </nav>
 
-    <div id="deployment-overlay" class="fixed inset-0 bg-black z-50 pointer-events-none opacity-0 flex items-center justify-center p-6 transition-all duration-500">
-        <div class="absolute top-6 right-6 md:right-12">
-            <button id="close-overlay" class="font-mono text-xs uppercase text-zinc-500 hover:text-yellow-400 tracking-widest border border-zinc-800 px-4 py-2 bg-zinc-950">
-                [ CLOSE_X ]
-            </button>
-        </div>
-        <div class="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            <div class="lg:col-span-5 border-l-2 border-yellow-400 pl-6 hidden lg:block">
-                <span class="font-mono text-xs text-zinc-500 block mb-2">INTEGRATION_STAGE // Alpha</span>
-                <h3 class="text-3xl font-bold uppercase tracking-tight mb-4">Command Node Interface</h3>
-                <p class="text-zinc-400 text-sm leading-relaxed font-light">
-                    Initiating connection parameter assignment. Complete the field telemetry coordinates to route a targeted deployment map setup directly to your system cluster.
-                </p>
-            </div>
-            <form class="lg:col-span-7 space-y-6 bg-zinc-950 border border-zinc-900 p-8 md:p-10 rounded-none relative" id="overlay-form">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div class="border-b border-zinc-800 focus-within:border-yellow-400 transition-colors pb-2">
-                        <label class="block font-mono text-[10px] uppercase text-zinc-500 mb-1">OPERATOR_NAME</label>
-                        <input type="text" required class="w-full bg-transparent text-sm text-zinc-100 focus:outline-none">
-                    </div>
-                    <div class="border-b border-zinc-800 focus-within:border-yellow-400 transition-colors pb-2">
-                        <label class="block font-mono text-[10px] uppercase text-zinc-500 mb-1">SECURE_EMAIL</label>
-                        <input type="email" required class="w-full bg-transparent text-sm text-zinc-100 focus:outline-none">
-                    </div>
-                </div>
-                <div class="border-b border-zinc-800 focus-within:border-yellow-400 transition-colors pb-2">
-                    <label class="block font-mono text-[10px] uppercase text-zinc-500 mb-1">FACILITY_ENVIRONMENT_PROFILE</label>
-                    <select class="w-full bg-transparent text-sm text-zinc-400 focus:outline-none py-1 border-none cursor-pointer">
-                        <option class="bg-zinc-950 text-white">Logistics Infrastructure & Cold Storage Warehouses</option>
-                        <option class="bg-zinc-950 text-white">Chemical Asset Storage / Processing Plants</option>
-                        <option class="bg-zinc-950 text-white">Medical Complexes & Diagnostic Environments</option>
-                        <option class="bg-zinc-950 text-white">Advanced Research Laboratory Facilities</option>
-                    </select>
-                </div>
-                <button type="submit" class="w-full bg-yellow-400 text-black font-mono font-bold py-4 text-xs tracking-widest uppercase transition-colors hover:bg-white">
-                    TRANSMIT_TARGET_METRICS //
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <div id="scroll-container" class="relative z-10 w-full">
+    <div id="main-content">
         
-        <section class="min-h-screen flex flex-col justify-center px-6 md:px-12 lg:px-24 relative select-none">
-            <div class="max-w-[1400px] w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-                <div class="lg:col-span-8">
-                    <span class="reveal-text font-mono text-xs text-yellow-400 uppercase tracking-widest block mb-4">// ADVANCED AUTONOMOUS TELEMETRY PLATFORM</span>
-                    <h1 class="split-text font-bold text-5xl md:text-8xl lg:text-9xl tracking-tighter leading-[0.85] text-white uppercase mb-8">
-                        HAZARD<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-zinc-400 to-zinc-700">MAPPING</span><br>EVOLVED
+        <section class="h-screen w-full flex flex-col justify-center px-6 md:px-12 relative overflow-hidden">
+            <div class="max-w-7xl mx-auto w-full z-10 pt-20">
+                <div class="overflow-hidden">
+                    <h1 class="hero-title font-display text-[8vw] md:text-[6vw] font-bold leading-[0.8] uppercase tracking-tighter">
+                        Autonomous
                     </h1>
                 </div>
-                <div class="lg:col-span-4 lg:text-right font-mono text-xs text-zinc-500 space-y-2 hidden lg:block leading-relaxed">
-                    <div>LATENCY_TARGET: &lt;5.0_SEC</div>
-                    <div>COMPUTE_NODE: EDGE_RPI4_8GB</div>
-                    <div>PRODUCTION_BRACKET: DISRUPTIVE</div>
+                <div class="overflow-hidden ml-[5vw] md:ml-[10vw]">
+                    <h1 class="hero-title font-display text-[8vw] md:text-[6vw] font-bold leading-[0.8] uppercase tracking-tighter text-outline">
+                        Hazard
+                    </h1>
                 </div>
-            </div>
-            
-            <div class="max-w-[1400px] w-full mx-auto mt-12 grid grid-cols-1 md:grid-cols-12 gap-6">
-                <p class="reveal-text md:col-span-6 text-zinc-400 text-base md:text-lg font-light leading-relaxed max-w-xl">
-                    An agile, high-stability mobile computing engine deployed to systematically eliminate environmental tracking blind spots and stagnant micro-pockets left unmonitored by fixed legacy installations.
-                </p>
-                <div class="md:col-span-6 flex items-end md:justify-end gap-4 mt-6 md:mt-0">
-                    <button class="trigger-overlay-alt border border-yellow-400/40 text-yellow-400 hover:bg-yellow-400 hover:text-black font-mono text-xs uppercase tracking-widest px-8 py-4 transition-all duration-300">
-                        ENGAGE_PILOT_LOGS
-                    </button>
+                <div class="overflow-hidden ml-[10vw] md:ml-[20vw] flex items-center gap-6">
+                    <h1 class="hero-title font-display text-[8vw] md:text-[6vw] font-bold leading-[0.8] uppercase tracking-tighter" style="color: var(--neon-volt);">
+                        Tracking.
+                    </h1>
+                </div>
+                
+                <div class="mt-16 max-w-xl ml-[10vw] md:ml-[20vw] hero-subtext opacity-0">
+                    <p class="text-lg md:text-xl text-zinc-300 font-medium leading-relaxed border-l-2 border-[#00f3ff] pl-6">
+                        An agile, multi-sensor computing platform engineered to eliminate structural blind spots in high-risk zones. Real-time telemetry for the modern industrial frontier.
+                    </p>
+                    <div class="mt-8 flex gap-6 text-xs font-bold tracking-widest uppercase text-zinc-500">
+                        <span>// EDGE COMPUTING</span>
+                        <span>// ZERO BLIND SPOTS</span>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <section id="gap" class="py-32 px-6 md:px-12 lg:px-24 border-t border-zinc-900 bg-black/40 backdrop-blur-md">
-            <div class="max-w-[1400px] w-full mx-auto">
-                <div class="mb-20">
-                    <span class="font-mono text-xs text-zinc-500 uppercase tracking-widest block mb-2">01 // CONSTRAINTS MATRIX</span>
-                    <h2 class="text-3xl md:text-5xl font-bold tracking-tighter uppercase text-white">Operational Realities</h2>
+        <section class="py-10">
+            <div class="marquee-container">
+                <div class="marquee-text text-outline" id="marquee-1">
+                    NO STATIC SENSORS — CONTINUOUS SPATIAL MAPPING — NO STATIC SENSORS — CONTINUOUS SPATIAL MAPPING
+                </div>
+            </div>
+            <div class="marquee-container" style="background: var(--neon-cyan);">
+                <div class="marquee-text text-black" id="marquee-2">
+                    &lt; 5 SEC LATENCY — RASPBERRY PI 4 EDGE — &lt; 5 SEC LATENCY — RASPBERRY PI 4 EDGE
+                </div>
+            </div>
+        </section>
+
+        <section class="py-32 px-6 md:px-12 relative">
+            <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                <div class="relative">
+                    <div class="absolute -left-10 top-0 w-1 h-full bg-[#ccff00] scale-y-0 origin-top scroll-line"></div>
+                    <h2 class="font-display text-4xl md:text-6xl font-bold uppercase tracking-tighter mb-8 reveal-text">
+                        The <span class="text-outline">Dead Zone</span> Matrix
+                    </h2>
+                    <p class="text-xl text-zinc-400 mb-8 font-medium leading-relaxed reveal-text">
+                        Fixed sensor layouts permanently miss up to <strong class="text-white">40% of micro-spatial anomalies</strong> due to architectural blockages and stagnant air pockets. Manual audits are too slow to catch cascading thermal leaks.
+                    </p>
+                    <button class="hover-target btn-glitch border-[#ccff00] text-[#ccff00] hover:bg-[#ccff00] reveal-text">
+                        VIEW_SOLUTION_ARCH
+                    </button>
                 </div>
                 
-                <div class="grid grid-cols-1 lg:grid-cols-3 border border-zinc-900
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="clip-box bg-zinc-900/50 border border-zinc-800 p-8 backdrop-blur-sm card-hover transform translate-y-10 opacity-0 stat-card">
+                        <div class="text-[#00f3ff] font-display text-sm mb-4">01 // STATIC BLINDNESS</div>
+                        <h3 class="text-2xl font-bold uppercase mb-2">Architectural Blocking</h3>
+                        <p class="text-zinc-400">Gas migration physics prevent stationary nodes from detecting localized pooling.</p>
+                    </div>
+                    <div class="clip-box bg-zinc-900/50 border border-zinc-800 p-8 backdrop-blur-sm card-hover transform translate-y-10 opacity-0 stat-card">
+                        <div class="text-[#ccff00] font-display text-sm mb-4">02 // FINANCIAL BARRIER</div>
+                        <h3 class="text-2xl font-bold uppercase mb-2">$70k+ Acquisition Walls</h3>
+                        <p class="text-zinc-400">Premium autonomous robotics isolate mid-size facilities entirely from facility safety tech.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="engineering" class="py-40 px-6 md:px-12 bg-zinc-950 relative">
+            <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
+                <h1 class="font-display text-[20vw] font-bold text-transparent" style="-webkit-text-stroke: 1px #333; line-height: 0.8;">HARDWARE</h1>
+                <h1 class="font-display text-[20vw] font-bold text-transparent ml-32" style="-webkit-text-stroke: 1px #333; line-height: 0.8;">FUSION</h1>
+            </div>
+            
+            <div class="max-w-7xl mx-auto relative z-10">
+                <h2 class="font-display text-3xl md:text-5xl font-bold uppercase tracking-tighter mb-16 text-center">
+                    Edge Compute <span style="color: var(--neon-cyan);">Payload</span>
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="border-t-2 border-[#00f3ff] pt-6 spec-item opacity-0">
+                        <h4 class="font-display text-xl font-bold uppercase mb-4 text-white">Raspberry Pi 4 (8GB)</h4>
+                        <p class="text-zinc-400 font-medium">On-device neural execution. Bypasses corporate cloud latency entirely for instantaneous analytical hazard isolation.</p>
+                    </div>
+                    <div class="border-t-2 border-white pt-6 spec-item opacity-0">
+                        <h4 class="font-display text-xl font-bold uppercase mb-4 text-white">8-Sensor Multimodal</h4>
+                        <p class="text-zinc-400 font-medium">Simultaneous structural tracking of $CH_4$, $NH_3$, $H_2S$, $CO_2$, and atmospheric particulates mapped to exact facility coordinates.</p>
+                    </div>
+                    <div class="border-t-2 border-[#ccff00] pt-6 spec-item opacity-0">
+                        <h4 class="font-display text-xl font-bold uppercase mb-4 text-white">Thermal-Visual Mesh</h4>
+                        <p class="text-zinc-400 font-medium">Overlays the MLX90640 thermal data array directly onto standard spatial video to flag invisible structural heat fractures.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="py-12 border-t border-zinc-900 bg-black text-center relative z-10">
+            <h1 class="font-display font-bold text-4xl uppercase tracking-tighter text-outline mb-6">SAFR_</h1>
+            <p class="text-xs font-bold tracking-widest text-zinc-600 uppercase">
+                &copy; 2026 SAFR AUTOMATION LABS. HARYANA DEPLOYMENT V1.0.
+            </p>
+        </footer>
+
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    
+    <script>
+        // === 1. PRELOADER SEQUENCE ===
+        const preloader = document.getElementById('preloader');
+        const loadingBar = document.querySelector('.loading-bar');
+        const loadingText = document.getElementById('loading-text');
+        
+        let progress = 0;
+        let loadInterval = setInterval(() => {
+            progress += Math.floor(Math.random() * 15) + 5;
+            if (progress > 100) progress = 100;
+            loadingBar.style.width = progress + '%';
+            
+            if (progress === 100) {
+                clearInterval(loadInterval);
+                loadingText.innerText = "SYSTEM ONLINE.";
+                setTimeout(() => {
+                    gsap.to(preloader, {
+                        yPercent: -100,
+                        duration: 1,
+                        ease: "power4.inOut",
+                        onComplete: initHeroAnimations
+                    });
+                }, 500);
+            }
+        }, 150);
+
+        // === 2. CUSTOM KINETIC CURSOR ===
+        const cursorDot = document.getElementById('cursor-dot');
+        const cursorRing = document.getElementById('cursor-ring');
+        let mouseX = 0, mouseY = 0;
+        let dotX = 0, dotY = 0;
+        let ringX = 0, ringY = 0;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        function animateCursor() {
+            dotX += (mouseX - dotX) * 0.3;
+            dotY += (mouseY - dotY) * 0.3;
+            ringX += (mouseX - ringX) * 0.1;
+            ringY += (mouseY - ringY) * 0.1;
+
+            cursorDot.style.transform = `translate(${dotX}px, ${dotY}px)`;
+            cursorRing.style.transform = `translate(${ringX}px, ${ringY}px)`;
+            requestAnimationFrame(animateCursor);
+        }
+        animateCursor();
+
+        // Cursor Hover Effects
+        document.querySelectorAll('.hover-target, a, button').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursorRing.style.width = '60px';
+                cursorRing.style.height = '60px';
+                cursorRing.style.backgroundColor = 'rgba(0, 243, 255, 0.1)';
+            });
+            el.addEventListener('mouseleave', () => {
+                cursorRing.style.width = '40px';
+                cursorRing.style.height = '40px';
+                cursorRing.style.backgroundColor = 'transparent';
+            });
+        });
+
+        // === 3. THREE.JS REACTIVE BACKGROUND ===
+        const canvas = document.getElementById('webgl-canvas');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050505, 0.002);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Create a high-tech topography wireframe (representing facility mapping)
+        const geometry = new THREE.PlaneGeometry(200, 200, 40, 40);
+        
+        // Displace vertices to create terrain
+        const vertices = geometry.attributes.position.array;
+        for (let i = 0; i < vertices.length; i += 3) {
+            vertices[i + 2] = Math.sin(vertices[i] * 0.05) * Math.cos(vertices[i + 1] * 0.05) * 10;
+        }
+
+        const material = new THREE.MeshBasicMaterial({ 
+            color: 0x00f3ff, 
+            wireframe: true,
+            transparent: true,
+            opacity: 0.15
+        });
+
+        const terrain = new THREE.Mesh(geometry, material);
+        terrain.rotation.x = -Math.PI / 2.5;
+        terrain.position.y = -20;
+        scene.add(terrain);
+
+        // Add a floating particle core (represents the robot/sensor node)
+        const coreGeo = new THREE.IcosahedronGeometry(8, 1);
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0xccff00, wireframe: true, transparent: true, opacity: 0.3 });
+        const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+        coreMesh.position.set(0, 5, -20);
+        scene.add(coreMesh);
+
+        camera.position.z = 30;
+
+        // Render Loop tied to Mouse + Scroll
+        let scrollY = 0;
+        window.addEventListener('scroll', () => { scrollY = window.scrollY; });
+
+        const clock = new THREE.Clock();
+
+        function animateWebGL() {
+            requestAnimationFrame(animateWebGL);
+            const elapsedTime = clock.getElapsedTime();
+
+            // Terrain moves forward endlessly
+            terrain.position.z = (elapsedTime * 5) % 10;
+            
+            // Core mesh rotates and reacts to scroll
+            coreMesh.rotation.y = elapsedTime * 0.2 + (mouseX * 0.001);
+            coreMesh.rotation.x = elapsedTime * 0.1 + (mouseY * 0.001);
+            coreMesh.position.y = 5 + Math.sin(elapsedTime * 2) * 2 - (scrollY * 0.02); // Dips on scroll
+
+            // Camera reacts to mouse
+            camera.position.x += ((mouseX - window.innerWidth / 2) * 0.02 - camera.position.x) * 0.05;
+            camera.position.y += (-(mouseY - window.innerHeight / 2) * 0.02 - camera.position.y) * 0.05 + 10;
+
+            camera.lookAt(scene.position);
+            renderer.render(scene, camera);
+        }
+        animateWebGL();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // === 4. GSAP KINETIC ANIMATIONS ===
+        gsap.registerPlugin(ScrollTrigger);
+
+        function initHeroAnimations() {
+            // Massive staggered title slide-up
+            gsap.from(".hero-title", {
+                y: 150,
+                opacity: 0,
+                duration: 1.2,
+                stagger: 0.15,
+                ease: "power4.out"
+            });
+            // Subtext fade in
+            gsap.to(".hero-subtext", {
+                opacity: 1,
+                duration: 1,
+                delay: 0.8,
+                ease: "power2.out"
+            });
+        }
+
+        // Marquee Scroll effect (Moves left/right based on scroll direction)
+        gsap.to("#marquee-1", {
+            xPercent: -20,
+            ease: "none",
+            scrollTrigger: {
+                trigger: "#marquee-1",
+                start: "top bottom",
+                end: "bottom top",
+                scrub: 1
+            }
+        });
+        gsap.to("#marquee-2", {
+            xPercent: 20,
+            ease: "none",
+            scrollTrigger: {
+                trigger: "#marquee-2",
+                start: "top bottom",
+                end: "bottom top",
+                scrub: 1
+            }
+        });
+
+        // Gap Section Reveals
+        gsap.to(".scroll-line", {
+            scaleY: 1,
+            ease: "none",
+            scrollTrigger: {
+                trigger: ".scroll-line",
+                start: "top 80%",
+                end: "bottom 40%",
+                scrub: 1
+            }
+        });
+
+        gsap.from(".reveal-text", {
+            y: 50,
+            opacity: 0,
+            duration: 1,
+            stagger: 0.2,
+            ease: "power3.out",
+            scrollTrigger: {
+                trigger: ".reveal-text",
+                start: "top 85%"
+            }
+        });
+
+        // Cards Stagger
+        gsap.to(".stat-card", {
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            stagger: 0.2,
+            ease: "power3.out",
+            scrollTrigger: {
+                trigger: ".stat-card",
+                start: "top 85%"
+            }
+        });
+
+        // Engineering Specs Fade In
+        gsap.to(".spec-item", {
+            opacity: 1,
+            y: -20,
+            duration: 1,
+            stagger: 0.3,
+            ease: "power2.out",
+            scrollTrigger: {
+                trigger: "#engineering",
+                start: "top 60%"
+            }
+        });
+
+    </script>
+</body>
+</html>
