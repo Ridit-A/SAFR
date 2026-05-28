@@ -1,0 +1,90 @@
+/* Zero out root scrolling mechanics to give Lenis absolute management */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+    background-color: #050505;
+}
+
+/* Isolate WebGL layer beneath content planes */
+#canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.45;
+}
+
+/* Ensure data content layer slides cleanly over WebGL background without collapsing */
+#scroll-container {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+}
+
+/* Cinematic Digital Scanline Overlay */
+.scanlines {
+    background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.25) 50%
+    ), linear-gradient(
+        90deg,
+        rgba(255, 0, 0, 0.06),
+        rgba(0, 255, 0, 0.02),
+        rgba(0, 0, 255, 0.06)
+    );
+    background-size: 100% 4px, 6px 100%;
+}
+
+/* Cinematic Cursor Engine Layout */
+#cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 100;
+    pointer-events: none;
+    display: none;
+}
+@media (min-width: 768px) {
+    #cursor { display: block; }
+    body { cursor: none; }
+    a, button, select, input { cursor: none !important; }
+}
+.cursor-dot {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background-color: #facc15;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.2s, height 0.2s;
+}
+.cursor-ring {
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(250, 204, 21, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: transform 0.08s ease-out, border-color 0.2s;
+}
+
+/* Advanced Transform Skew Effect for Cards on Momentum Scroll */
+.spatial-card {
+    will-change: transform;
+    transform-style: preserve-3d;
+}
+
+/* System Modals Control Logic */
+#deployment-overlay.active {
+    pointer-events: auto !important;
+    opacity: 1 !important;
+    background-color: rgba(5, 5, 5, 0.98);
+}
