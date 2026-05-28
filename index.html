@@ -3,143 +3,692 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAFR // ARCHITECTING AUTONOMY</title>
+    <title>SAFR // Autonomous Telemetry</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
-        :root { --bg: #f4f4f2; --text: #0a0a0a; --accent: #ff3e00; }
-        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; cursor: none; overflow-x: hidden; }
+        /* ==========================================
+           CORE STYLES & VARIABLES
+        ========================================== */
+        :root {
+            --bg-color: #f4f4f2;
+            --text-main: #111111;
+            --accent-blue: #2563eb;
+            --accent-orange: #ea580c;
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%;
+            background-color: var(--bg-color); color: var(--text-main);
+            font-family: 'Inter', sans-serif; overflow-x: hidden; cursor: none;
+        }
+
+        /* Hide scrollbar but keep functionality */
+        ::-webkit-scrollbar { display: none; }
+        html { scrollbar-width: none; }
+
+        /* Typography */
+        .font-display { font-family: 'Syne', sans-serif; }
         
-        /* Smooth Scroll */
+        /* Lenis Smooth Scroll Core */
         html.lenis { height: auto; }
+        .lenis.lenis-smooth { scroll-behavior: auto !important; }
         .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+        .lenis.lenis-stopped { overflow: hidden; }
+
+        /* ==========================================
+           CUSTOM KINETIC CURSOR
+        ========================================== */
+        #cursor-dot {
+            position: fixed; top: 0; left: 0; width: 8px; height: 8px;
+            background: var(--accent-orange); border-radius: 50%;
+            transform: translate(-50%, -50%); z-index: 9999;
+            pointer-events: none; transition: width 0.3s, height 0.3s, background 0.3s;
+        }
+        #cursor-ring {
+            position: fixed; top: 0; left: 0; width: 40px; height: 40px;
+            border: 1px solid rgba(17, 17, 17, 0.2); border-radius: 50%;
+            transform: translate(-50%, -50%); z-index: 9998;
+            pointer-events: none; transition: width 0.3s, height 0.3s, border-color 0.3s;
+        }
+
+        /* ==========================================
+           BACKGROUND LAYERS
+        ========================================== */
+        #webgl-canvas {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            opacity: 0.6; /* Soften the 3D effect against the light background */
+        }
+        .noise-overlay {
+            position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+            opacity: 0.4; mix-blend-mode: multiply;
+        }
+        #main-content { position: relative; z-index: 10; }
+
+        /* ==========================================
+           PRELOADER (LOGO MASK ANIMATION)
+        ========================================== */
+        #preloader {
+            position: fixed; inset: 0; background: var(--text-main); z-index: 10000;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .logo-mask {
+            font-family: 'Syne', sans-serif; font-size: 15vw; font-weight: 800;
+            color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,0.2);
+            position: relative; overflow: hidden;
+        }
+        .logo-fill {
+            position: absolute; top: 100%; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); color: var(--text-main);
+            -webkit-background-clip: text; -webkit-text-fill-color: var(--bg-color);
+            transition: top 1.5s cubic-bezier(0.77, 0, 0.175, 1);
+        }
+
+        /* ==========================================
+           TEXT REVEAL UTILITIES (AWWWARDS STYLE)
+        ========================================== */
+        .line-wrap { overflow: hidden; position: relative; display: inline-block; vertical-align: top; }
+        .line-inner { display: inline-block; will-change: transform; }
+
+        .scrub-text { color: rgba(17, 17, 17, 0.15); }
+        .scrub-highlight { color: var(--text-main); }
+
+        /* ==========================================
+           MODALS & PANELS (FUNCTIONAL UI)
+        ========================================== */
+        .side-panel {
+            position: fixed; top: 0; right: -100%; width: 100%; max-width: 500px; height: 100vh;
+            background: var(--bg-color); border-left: 1px solid rgba(17,17,17,0.1);
+            z-index: 9000; padding: 3rem; display: flex; flex-direction: column;
+            transition: right 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+        }
+        .side-panel.active { right: 0; }
         
-        /* Premium UI Elements */
-        .glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.05); }
-        .btn-pulse { position: relative; }
-        .btn-pulse::after { content: ''; position: absolute; inset: -4px; border: 1px solid var(--accent); border-radius: 50px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
+        .full-modal {
+            position: fixed; inset: 0; background: var(--text-main); color: var(--bg-color);
+            z-index: 9500; transform: translateY(100%); overflow-y: auto;
+            transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+            padding: 5rem 10%;
+        }
+        .full-modal.active { transform: translateY(0); }
 
-        /* Cursor */
-        .cursor { width: 10px; height: 10px; background: var(--accent); border-radius: 50%; position: fixed; pointer-events: none; z-index: 9999; transition: transform 0.1s; }
+        .overlay-bg {
+            position: fixed; inset: 0; background: rgba(17,17,17,0.4); backdrop-filter: blur(5px);
+            z-index: 8900; opacity: 0; pointer-events: none; transition: opacity 0.5s ease;
+        }
+        .overlay-bg.active { opacity: 1; pointer-events: auto; }
 
-        /* Transitions */
-        .page { opacity: 1; transition: opacity 0.6s ease; }
-        .page.hidden { display: none; opacity: 0; }
+        /* Form Inputs */
+        input, select, textarea {
+            width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(17,17,17,0.2);
+            padding: 15px 0; margin-bottom: 30px; font-family: 'Inter', sans-serif; font-size: 14px;
+            color: var(--text-main); outline: none; transition: border-color 0.3s;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 
-        /* Team Card Tilt Effect */
-        .card-tilt { perspective: 1000px; }
-        .card-inner { transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; }
+        /* Navigation Button */
+        .btn-premium {
+            background: var(--text-main); color: var(--bg-color); padding: 12px 28px;
+            border-radius: 50px; font-weight: 500; text-transform: uppercase; font-size: 12px;
+            letter-spacing: 1px; transition: transform 0.3s ease, background 0.3s ease;
+        }
+        .btn-premium:hover { background: var(--accent-blue); transform: scale(1.05); }
+
+        /* Striped moving background for a section */
+        .stripe-bg {
+            background: repeating-linear-gradient(
+                -45deg, transparent, transparent 2px, rgba(17, 17, 17, 0.03) 2px, rgba(17, 17, 17, 0.03) 10px
+            );
+            background-size: 200% 200%;
+            animation: moveStripes 20s linear infinite;
+        }
+        @keyframes moveStripes {
+            0% { background-position: 0 0; }
+            100% { background-position: 100% 100%; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="cursor" id="cursor"></div>
-
-    <nav class="fixed top-0 w-full z-50 p-8 flex justify-between items-center mix-blend-difference text-white">
-        <div class="text-2xl font-bold font-display cursor-pointer" onclick="navigate('home')">SAFR_</div>
-        <div class="flex gap-8 text-xs font-bold uppercase tracking-widest">
-            <span class="cursor-pointer hover:text-[var(--accent)]" onclick="navigate('team')">Founding Team</span>
-            <span class="cursor-pointer hover:text-[var(--accent)]" onclick="navigate('home')">Technology</span>
+    <div id="preloader">
+        <div class="logo-mask">
+            SAFR
+            <div class="logo-fill" id="logo-fill">SAFR</div>
         </div>
-        <button id="pilot-btn" class="bg-white text-black px-6 py-2 rounded-full font-bold text-xs uppercase btn-pulse hover:bg-[var(--accent)] hover:text-white transition-all">
-            Init Pilot
-        </button>
-    </nav>
+    </div>
 
-    <main id="app">
-        <section id="page-home" class="page min-h-screen flex flex-col justify-center px-10">
-            <h1 class="font-display text-[15vw] font-bold leading-[0.8] uppercase tracking-tighter">
-                AUTONOMOUS<br><span class="text-[var(--accent)]">SYSTEMS</span>
-            </h1>
-            <div class="mt-20 max-w-xl text-lg font-light">
-                Engineering the invisible. SAFR provides high-fidelity LiDAR telemetry for environments where human presence is compromised.
-            </div>
-        </section>
+    <div id="cursor-dot"></div>
+    <div id="cursor-ring"></div>
+    
+    <canvas id="webgl-canvas"></canvas>
+    <div class="noise-overlay"></div>
 
-        <section id="page-team" class="page hidden min-h-screen pt-40 px-10">
-            <h2 class="font-display text-8xl font-bold mb-20 uppercase">Our Team.</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-20">
-                <div class="card-tilt group cursor-pointer" onmousemove="tilt(event)" onmouseleave="resetTilt(event)">
-                    <div class="card-inner w-full h-[500px] bg-gray-200 rounded-2xl overflow-hidden relative">
-                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1000" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700">
-                        <div class="absolute bottom-0 left-0 p-8 bg-gradient-to-t from-black to-transparent w-full text-white">
-                            <h3 class="text-3xl font-bold font-display">Founder // Lead Architect</h3>
-                            <p class="text-sm opacity-80 mt-2">Pioneering the intersection of LiDAR spatial awareness and autonomous facility safety.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex flex-col justify-center">
-                    <p class="text-2xl font-light leading-relaxed">
-                        "We believe that safety shouldn't be reactive. By leveraging edge-computing and precise spatial geometry, we are redefining how industries manage risk in high-density environments. Our team combines expertise in robotics, structural engineering, and systems architecture to build the unbuildable."
-                    </p>
-                </div>
-            </div>
-        </section>
-    </main>
+    <div class="overlay-bg" id="global-overlay"></div>
 
-    <div id="mission-modal" class="fixed inset-0 z-[100] bg-black/90 text-white flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500">
-        <div class="max-w-2xl w-full p-12 glass bg-white/5 border-white/10">
-            <div class="flex justify-between items-center mb-10">
-                <h2 class="text-4xl font-display font-bold uppercase">System Initialization</h2>
-                <button onclick="closeModal()" class="text-xl hover:text-[var(--accent)]">✕</button>
-            </div>
-            <form class="grid grid-cols-2 gap-6">
-                <input type="text" placeholder="FACILITY NAME" class="bg-transparent border-b border-white/20 p-4 focus:border-[var(--accent)] outline-none">
-                <input type="text" placeholder="SECTOR CODE" class="bg-transparent border-b border-white/20 p-4 focus:border-[var(--accent)] outline-none">
-                <textarea placeholder="MISSION PARAMETERS" class="col-span-2 bg-transparent border-b border-white/20 p-4 focus:border-[var(--accent)] outline-none h-32"></textarea>
-                <button type="button" class="col-span-2 py-4 bg-[var(--accent)] font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-all">Launch Sequence</button>
+    <div class="side-panel" id="contact-panel">
+        <div class="flex justify-between items-center mb-16">
+            <h3 class="font-display font-bold text-2xl">INITIATE.</h3>
+            <button class="hover-target text-sm font-medium tracking-widest uppercase hover:text-[var(--accent-orange)]" id="close-contact">Close ✕</button>
+        </div>
+        <div class="flex-grow">
+            <p class="text-sm text-gray-500 mb-8">Establish a secure deployment handshake. Provide facility metrics to calculate hardware requirements.</p>
+            <form id="pilot-form">
+                <input type="text" placeholder="Operator Name / ID" required class="hover-target">
+                <input type="email" placeholder="Secure Email Address" required class="hover-target">
+                <select required class="hover-target">
+                    <option value="" disabled selected>Select Facility Profile</option>
+                    <option value="chemical">Petrochemical / Chemical Storage</option>
+                    <option value="logistics">Logistics Hub / Warehousing</option>
+                    <option value="medical">Diagnostic / Medical Facility</option>
+                </select>
+                <button type="submit" class="btn-premium w-full mt-4 hover-target hover:bg-[var(--accent-orange)]">TRANSMIT REQUEST</button>
             </form>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <div class="full-modal" id="legal-modal">
+        <div class="flex justify-between items-center mb-16 border-b border-gray-800 pb-8">
+            <h2 class="font-display font-bold text-4xl md:text-6xl text-[var(--bg-color)]">COMPLIANCE.</h2>
+            <button class="hover-target text-sm font-medium tracking-widest uppercase text-gray-400 hover:text-white" id="close-legal">Close ✕</button>
+        </div>
+        <div class="max-w-4xl mx-auto space-y-12 text-gray-400 font-light text-lg leading-relaxed">
+            <section>
+                <h3 class="text-white font-display text-2xl mb-4">01. Edge Localization Protocol</h3>
+                <p>All environmental spatial telemetry, including thermal matrices and localized gas concentration levels, is processed natively on the internal computational hardware (R-Pi 4 Core). We strictly bypass external corporate clouds to ensure zero-latency localized anomaly detection and prevent intercept vulnerabilities.</p>
+            </section>
+            <section>
+                <h3 class="text-white font-display text-2xl mb-4">02. Biometric & Tracking Exclusions</h3>
+                <p>Visual sensory arrays deployed on the SAFR chassis are hard-coded to strictly map structural integrity and spatial boundaries. The neural processing models contain no personnel facial tracking, identity aggregation, or biometric storage protocols. The system is blind to human identity.</p>
+            </section>
+            <section>
+                <h3 class="text-white font-display text-2xl mb-4">03. Network Isolation Standards</h3>
+                <p>WebSocket alerts and live dashboard telemetry operate exclusively on isolated facility intranets (via the local ESP32 Access Point). The architecture is intentionally severed from wide-area networks, ensuring strict protection against external hacking vectors.</p>
+            </section>
+            <section>
+                <h3 class="text-white font-display text-2xl mb-4">04. Disruptive Production Disclaimer</h3>
+                <p>System operations detailed herein represent current alpha validation architectures verified during active field deployments (e.g., Haryana Emergency Hospital). Listed operational metrics (100% blindspot closure, <5s lag) relate specifically to these tested parameters and scale dynamically based on custom facility topology.</p>
+            </section>
+        </div>
+    </div>
+
+    <nav class="fixed top-0 w-full z-50 p-6 md:p-10 flex justify-between items-center transition-all duration-300" id="navbar">
+        <div class="font-display font-bold text-2xl tracking-tighter hover-target">SAFR.</div>
+        
+        <div class="hidden md:flex gap-12 text-xs font-semibold tracking-[0.15em] uppercase">
+            <a href="#gap" class="hover-target hover:text-[var(--accent-blue)] transition-colors">The Gap</a>
+            <a href="#architecture" class="hover-target hover:text-[var(--accent-blue)] transition-colors">Architecture</a>
+            <a href="#validation" class="hover-target hover:text-[var(--accent-orange)] transition-colors">Validation</a>
+        </div>
+
+        <button class="btn-premium hover-target" id="btn-open-contact">Init Pilot</button>
+    </nav>
+
+    <div id="main-content">
+
+        <section class="min-h-screen flex flex-col justify-center px-6 md:px-12 pt-20 pb-10">
+            <div class="max-w-[95vw] mx-auto w-full">
+                <div class="text-left">
+                    <div class="line-wrap"><div class="line-inner hero-text font-display text-[12vw] md:text-[10vw] font-bold leading-[0.85] uppercase tracking-tighter">Autonomous</div></div><br>
+                    <div class="line-wrap"><div class="line-inner hero-text font-display text-[12vw] md:text-[10vw] font-bold leading-[0.85] uppercase tracking-tighter text-[var(--accent-blue)]">Anomaly</div></div><br>
+                    <div class="line-wrap ml-0 md:ml-[15vw]"><div class="line-inner hero-text font-display text-[12vw] md:text-[10vw] font-bold leading-[0.85] uppercase tracking-tighter">Hunting.</div></div>
+                </div>
+                
+                <div class="mt-16 md:mt-24 max-w-2xl ml-0 md:ml-[15vw] flex gap-6 hero-subtext opacity-0">
+                    <div class="w-1 bg-[var(--accent-orange)] shrink-0"></div>
+                    <p class="text-lg md:text-2xl font-light text-gray-700 leading-relaxed">
+                        A disruptive, multi-sensor platform engineered to aggressively map stagnant gas pockets and structural blind spots in zero-visibility environments.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="absolute bottom-10 right-10 flex flex-col items-center gap-4 opacity-50 hero-subtext">
+                <span class="text-[10px] uppercase tracking-widest font-semibold writing-vertical-rl rotate-180">Scroll</span>
+                <div class="w-[1px] h-16 bg-black"></div>
+            </div>
+        </section>
+
+        <section class="py-32 px-6 md:px-12 stripe-bg border-y border-gray-200">
+            <div class="max-w-6xl mx-auto">
+                <p class="font-display text-3xl md:text-5xl leading-tight font-bold scrub-container">
+                    Traditional 70,000 dollar stationary arrays leave up to forty percent of localized facilities completely unmonitored. Gas migration physics block static nodes, allowing toxic pooling and thermal escalations to cascade undetected between manual audits.
+                </p>
+            </div>
+        </section>
+
+        <section id="gap" class="h-screen bg-[var(--text-main)] text-[var(--bg-color)] relative overflow-hidden" id="horizontal-sec">
+            <div class="absolute top-10 left-12 font-display text-sm tracking-widest uppercase text-gray-500">// The Reality Matrix</div>
+            
+            <div class="flex h-full items-center w-[300vw]" id="horizontal-container">
+                <div class="w-screen px-12 md:px-24 flex items-center">
+                    <div class="max-w-3xl">
+                        <div class="text-[10rem] font-display font-bold leading-none text-gray-800 absolute -top-10 -left-10 opacity-20">01</div>
+                        <h2 class="font-display text-5xl md:text-7xl font-bold uppercase mb-8">Micro-Spatial<br><span class="text-[var(--accent-blue)]">Blindness.</span></h2>
+                        <p class="text-xl text-gray-400 font-light leading-relaxed max-w-xl">
+                            Stagnant air pockets, unpredictable convection currents, and complex architectural barriers render stationary sensors entirely useless in large-scale facility layouts. You can't fix what the sensor can't reach.
+                        </p>
+                    </div>
+                </div>
+                <div class="w-screen px-12 md:px-24 flex items-center">
+                    <div class="max-w-3xl">
+                        <div class="text-[10rem] font-display font-bold leading-none text-gray-800 absolute -top-10 -left-10 opacity-20">02</div>
+                        <h2 class="font-display text-5xl md:text-7xl font-bold uppercase mb-8">Human<br><span class="text-[var(--accent-orange)]">Limitations.</span></h2>
+                        <p class="text-xl text-gray-400 font-light leading-relaxed max-w-xl">
+                            Intermittent safety sweeps rely on human endurance and standard shift intervals. A localized thermal fracture or gas leak can pool for hours before discovery. We reduce discovery time from hours to under 5 seconds.
+                        </p>
+                    </div>
+                </div>
+                <div class="w-screen px-12 md:px-24 flex items-center">
+                    <div class="max-w-3xl">
+                        <div class="text-[10rem] font-display font-bold leading-none text-gray-800 absolute -top-10 -left-10 opacity-20">03</div>
+                        <h2 class="font-display text-5xl md:text-7xl font-bold uppercase mb-8">Capital<br>Exclusions.</h2>
+                        <p class="text-xl text-gray-400 font-light leading-relaxed max-w-xl">
+                            Premium autonomous safety robotics deploy at steep acquisition brackets exceeding $70k. This creates a massive financial wall, isolating mid-sized operations, public hospitals, and laboratories from enterprise-grade safety.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="architecture" class="py-40 px-6 md:px-12 relative">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex flex-col md:flex-row justify-between items-end mb-24 reveal-up">
+                    <h2 class="font-display text-6xl md:text-8xl font-bold uppercase tracking-tighter leading-none">
+                        Hardware<br>Matrix.
+                    </h2>
+                    <p class="text-gray-500 text-sm font-semibold tracking-widest uppercase max-w-xs text-right hidden md:block">
+                        Engineered for agile deployment. Processing on the edge.
+                    </p>
+                </div>
+
+                <div class="space-y-0 border-t border-gray-300">
+                    <div class="py-12 border-b border-gray-300 group hover-target arch-row flex flex-col md:flex-row justify-between items-start md:items-center">
+                        <div class="flex items-center gap-8 mb-6 md:mb-0">
+                            <span class="font-display text-xl text-gray-400">01</span>
+                            <h3 class="font-display text-4xl md:text-5xl font-bold uppercase group-hover:text-[var(--accent-blue)] transition-colors">R-Pi 4 Core</h3>
+                        </div>
+                        <div class="max-w-md">
+                            <p class="text-gray-600 font-light leading-relaxed">
+                                Isolated, high-throughput on-device analytics powering rapid sensor data ingestion. We execute complex neural models locally, bypassing corporate cloud latency entirely.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="py-12 border-b border-gray-300 group hover-target arch-row flex flex-col md:flex-row justify-between items-start md:items-center">
+                        <div class="flex items-center gap-8 mb-6 md:mb-0">
+                            <span class="font-display text-xl text-gray-400">02</span>
+                            <h3 class="font-display text-4xl md:text-5xl font-bold uppercase group-hover:text-[var(--accent-orange)] transition-colors">8-Node Payload</h3>
+                        </div>
+                        <div class="max-w-md">
+                            <p class="text-gray-600 font-light leading-relaxed">
+                                Continuous, simultaneous mapping of critical variants including CH4, NH3, H2S, CO2, and airborne atmospheric particulates directly to internal facility geometry.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="py-12 border-b border-gray-300 group hover-target arch-row flex flex-col md:flex-row justify-between items-start md:items-center">
+                        <div class="flex items-center gap-8 mb-6 md:mb-0">
+                            <span class="font-display text-xl text-gray-400">03</span>
+                            <h3 class="font-display text-4xl md:text-5xl font-bold uppercase group-hover:text-[var(--text-main)] transition-colors">Thermal Mesh</h3>
+                        </div>
+                        <div class="max-w-md">
+                            <p class="text-gray-600 font-light leading-relaxed">
+                                Integrates MLX90640 thermal data matrices seamlessly onto standard visual streams. The robot flags invisible structural heat fractures before combustion events trigger.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="validation" class="py-32 px-6 md:px-12 bg-white border-y border-gray-200">
+            <div class="max-w-7xl mx-auto">
+                <div class="mb-24 text-center reveal-up">
+                    <span class="font-mono text-xs text-[var(--accent-orange)] tracking-widest uppercase block mb-4">// DEPLOYMENT METRICS</span>
+                    <h2 class="font-display text-5xl md:text-7xl font-bold uppercase tracking-tighter">Pilot Proven.</h2>
+                    <p class="text-gray-500 mt-6 max-w-xl mx-auto">Validated in real-world, high-risk environments along the Haryana Emergency Hospital tracking route. Disrupting industry baselines completely.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+                    <div class="reveal-up border-r border-gray-200 last:border-0 hover-target">
+                        <div class="font-display text-7xl md:text-8xl font-bold text-[var(--text-main)] mb-2"><span class="counter" data-target="100">0</span>%</div>
+                        <span class="text-xs font-bold tracking-widest text-gray-400 uppercase">Blindspot Closure</span>
+                    </div>
+                    <div class="reveal-up border-r border-gray-200 last:border-0 hover-target">
+                        <div class="font-display text-7xl md:text-8xl font-bold text-[var(--accent-blue)] mb-2"><span class="counter" data-target="5">0</span>s</div>
+                        <span class="text-xs font-bold tracking-widest text-gray-400 uppercase">Telemetry Lag Limit</span>
+                    </div>
+                    <div class="reveal-up hover-target">
+                        <div class="font-display text-7xl md:text-8xl font-bold text-[var(--accent-orange)] mb-2">$<span class="counter" data-target="250">0</span></div>
+                        <span class="text-xs font-bold tracking-widest text-gray-400 uppercase">Max Assembly Cost</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="h-[70vh] flex flex-col justify-center items-center text-center px-6 bg-[var(--text-main)] text-[var(--bg-color)]">
+            <h2 class="font-display text-[10vw] font-bold uppercase tracking-tighter leading-none hover-target" id="huge-init-btn">
+                INIT_PILOT.
+            </h2>
+            <p class="text-gray-400 mt-8 max-w-md font-light text-lg">Shift your facility safety from reactive human observation to proactive autonomous prediction.</p>
+        </section>
+
+        <footer class="py-8 px-6 md:px-12 border-t border-gray-800 bg-[var(--text-main)] text-white">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="font-display font-bold text-2xl tracking-tighter text-gray-500">SAFR.</div>
+                
+                <div class="flex gap-8 text-[10px] font-bold tracking-widest uppercase text-gray-500">
+                    <button id="btn-legal" class="hover-target hover:text-white transition-colors">Legal & Privacy</button>
+                    <span>&copy; 2026 SAFR AUTOMATION LABS</span>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
     <script src="https://unpkg.com/@studio-freight/lenis@1.0.33/dist/lenis.min.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    
     <script>
-        // Smooth Scroll
-        const lenis = new Lenis();
-        function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
-        requestAnimationFrame(raf);
+        gsap.registerPlugin(ScrollTrigger);
 
-        // Navigation Engine
-        function navigate(pageId) {
-            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-            document.getElementById(`page-${pageId}`).classList.remove('hidden');
-        }
-
-        // Mission Control
-        const modal = document.getElementById('mission-modal');
-        document.getElementById('pilot-btn').onclick = () => {
-            modal.style.opacity = '1';
-            modal.style.pointerEvents = 'all';
+        // ==========================================
+        // 1. PRELOADER ANIMATION (LOGO MASK)
+        // ==========================================
+        window.onload = () => {
+            const tl = gsap.timeline();
+            // Fill the logo text
+            tl.to('#logo-fill', { top: "0%", duration: 1.5, ease: "power4.inOut" })
+              // Slide preloader up and away
+              .to('#preloader', { yPercent: -100, duration: 1, ease: "expo.inOut" })
+              .call(initHeroAnimations, null, "-=0.5");
         };
-        function closeModal() {
-            modal.style.opacity = '0';
-            modal.style.pointerEvents = 'none';
-        }
 
-        // Custom Cursor
-        const cursor = document.getElementById('cursor');
-        document.addEventListener('mousemove', (e) => {
-            gsap.to(cursor, { x: e.clientX, y: e.clientY, duration: 0.1 });
+        // ==========================================
+        // 2. SMOOTH SCROLL (LENIS)
+        // ==========================================
+        const lenis = new Lenis({
+            duration: 1.5, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            direction: 'vertical', smooth: true
+        });
+        
+        lenis.on('scroll', ScrollTrigger.update);
+        gsap.ticker.add((time)=>{ lenis.raf(time * 1000) });
+        gsap.ticker.lagSmoothing(0);
+
+        // Scroll to anchors
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                lenis.scrollTo(this.getAttribute('href'), { offset: 0, duration: 1.5 });
+            });
         });
 
-        // 3D Tilt Function
-        function tilt(e) {
-            const card = e.currentTarget.querySelector('.card-inner');
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            const rotateX = (y - centerY) / 20;
-            const rotateY = (centerX - x) / 20;
-            gsap.to(card, { rotateX: rotateX, rotateY: rotateY, duration: 0.5 });
+        // Navbar Hide/Show on Scroll
+        let lastScroll = 0;
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset;
+            if (currentScroll > 100) {
+                navbar.style.background = 'rgba(244, 244, 242, 0.9)';
+                navbar.style.backdropFilter = 'blur(10px)';
+                navbar.style.borderBottom = '1px solid rgba(17,17,17,0.1)';
+            } else {
+                navbar.style.background = 'transparent';
+                navbar.style.backdropFilter = 'none';
+                navbar.style.borderBottom = 'none';
+            }
+            if (currentScroll > lastScroll && currentScroll > 200) {
+                navbar.style.transform = 'translateY(-100%)'; // Hide down
+            } else {
+                navbar.style.transform = 'translateY(0)'; // Show up
+            }
+            lastScroll = currentScroll;
+        });
+
+        // ==========================================
+        // 3. CUSTOM MAGNETIC CURSOR
+        // ==========================================
+        const cursorDot = document.getElementById('cursor-dot');
+        const cursorRing = document.getElementById('cursor-ring');
+        let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+        let dotX = mouseX, dotY = mouseY, ringX = mouseX, ringY = mouseY;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX; mouseY = e.clientY;
+        });
+
+        function animateCursor() {
+            dotX += (mouseX - dotX) * 0.2; dotY += (mouseY - dotY) * 0.2;
+            ringX += (mouseX - ringX) * 0.1; ringY += (mouseY - ringY) * 0.1;
+            cursorDot.style.left = `${dotX}px`; cursorDot.style.top = `${dotY}px`;
+            cursorRing.style.left = `${ringX}px`; cursorRing.style.top = `${ringY}px`;
+            requestAnimationFrame(animateCursor);
         }
-        function resetTilt(e) {
-            gsap.to(e.currentTarget.querySelector('.card-inner'), { rotateX: 0, rotateY: 0, duration: 0.5 });
+        animateCursor();
+
+        document.querySelectorAll('.hover-target, a, button, input, select').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursorDot.style.transform = 'translate(-50%, -50%) scale(0)';
+                cursorRing.style.width = '60px'; cursorRing.style.height = '60px';
+                cursorRing.style.backgroundColor = 'rgba(17, 17, 17, 0.05)';
+                cursorRing.style.borderColor = 'var(--accent-blue)';
+            });
+            el.addEventListener('mouseleave', () => {
+                cursorDot.style.transform = 'translate(-50%, -50%) scale(1)';
+                cursorRing.style.width = '40px'; cursorRing.style.height = '40px';
+                cursorRing.style.backgroundColor = 'transparent';
+                cursorRing.style.borderColor = 'rgba(17, 17, 17, 0.2)';
+            });
+        });
+
+        // ==========================================
+        // 4. FUNCTIONAL UI (MODALS & PANELS)
+        // ==========================================
+        const contactPanel = document.getElementById('contact-panel');
+        const legalModal = document.getElementById('legal-modal');
+        const globalOverlay = document.getElementById('global-overlay');
+
+        function openPanel(element) {
+            lenis.stop();
+            globalOverlay.classList.add('active');
+            element.classList.add('active');
         }
+        function closePanels() {
+            contactPanel.classList.remove('active');
+            legalModal.classList.remove('active');
+            globalOverlay.classList.remove('active');
+            lenis.start();
+        }
+
+        // Event Listeners
+        document.getElementById('btn-open-contact').addEventListener('click', () => openPanel(contactPanel));
+        document.getElementById('huge-init-btn').addEventListener('click', () => openPanel(contactPanel));
+        document.getElementById('btn-legal').addEventListener('click', () => openPanel(legalModal));
+        
+        document.getElementById('close-contact').addEventListener('click', closePanels);
+        document.getElementById('close-legal').addEventListener('click', closePanels);
+        globalOverlay.addEventListener('click', closePanels);
+
+        document.getElementById('pilot-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.innerHTML = "CONNECTION ESTABLISHED ✓";
+            btn.style.background = "var(--text-main)";
+            setTimeout(closePanels, 1500);
+        });
+
+        // ==========================================
+        // 5. WEBGL FLUID TERRAIN (Smooth & Premium)
+        // ==========================================
+        const canvas = document.getElementById('webgl-canvas');
+        const scene = new THREE.Scene();
+        // Light fog to blend into background
+        scene.fog = new THREE.FogExp2(0xf4f4f2, 0.003);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+        camera.position.set(0, 40, 100);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Create a dense plane for smooth rippling
+        const geometry = new THREE.PlaneGeometry(300, 300, 80, 80);
+        // Rotate flat
+        geometry.rotateX(-Math.PI / 2);
+
+        // Premium Material: Smooth, slightly metallic, reactive to light
+        const material = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.5,
+            metalness: 0.1,
+            wireframe: false,
+            flatShading: false
+        });
+
+        const terrain = new THREE.Mesh(geometry, material);
+        scene.add(terrain);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        // A blue light that stays relatively static
+        const blueLight = new THREE.PointLight(0x2563eb, 2, 200);
+        blueLight.position.set(-50, 50, 0);
+        scene.add(blueLight);
+
+        // An orange light that follows the mouse
+        const mouseLight = new THREE.PointLight(0xea580c, 3, 150);
+        scene.add(mouseLight);
+
+        // Save original vertices for wave math
+        const originalPositions = geometry.attributes.position.clone();
+
+        const clock = new THREE.Clock();
+        function animateWebGL() {
+            requestAnimationFrame(animateWebGL);
+            const time = clock.getElapsedTime();
+
+            // Track mouse light
+            const targetLightX = (mouseX / window.innerWidth) * 200 - 100;
+            const targetLightZ = (mouseY / window.innerHeight) * 100 - 50;
+            mouseLight.position.x += (targetLightX - mouseLight.position.x) * 0.05;
+            mouseLight.position.z += (targetLightZ - mouseLight.position.z) * 0.05;
+            mouseLight.position.y = 30;
+
+            // Fluid Vertex Displacement (Gentle Waves)
+            const posAttr = geometry.attributes.position;
+            for(let i=0; i<posAttr.count; i++) {
+                const ox = originalPositions.getX(i);
+                const oz = originalPositions.getZ(i);
+                
+                // Combining two sine waves for organic fluid motion
+                const elevation = Math.sin(ox * 0.05 + time) * 3 + Math.cos(oz * 0.05 + time * 0.8) * 3;
+                posAttr.setY(i, elevation);
+            }
+            posAttr.needsUpdate = true;
+            geometry.computeVertexNormals(); // Crucial for lighting to reflect correctly off waves
+
+            renderer.render(scene, camera);
+        }
+        animateWebGL();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ==========================================
+        // 6. GSAP KINETIC ANIMATIONS
+        // ==========================================
+
+        // Hero Reveal
+        function initHeroAnimations() {
+            gsap.from(".line-inner", {
+                yPercent: 120, duration: 1.2, stagger: 0.15, ease: "power4.out"
+            });
+            gsap.to(".hero-subtext", { opacity: 1, duration: 1, delay: 0.8 });
+        }
+
+        // Text Scrub Effect (Split paragraph into spans manually for scrub)
+        const scrubContainer = document.querySelector('.scrub-container');
+        const words = scrubContainer.innerText.split(' ');
+        scrubContainer.innerHTML = '';
+        words.forEach(word => {
+            const span = document.createElement('span');
+            span.innerText = word + ' ';
+            span.classList.add('scrub-text');
+            scrubContainer.appendChild(span);
+        });
+
+        gsap.to('.scrub-text', {
+            color: 'var(--text-main)',
+            stagger: 0.1,
+            scrollTrigger: {
+                trigger: '.scrub-container',
+                start: 'top 80%',
+                end: 'bottom 50%',
+                scrub: true
+            }
+        });
+
+        // Horizontal Scroll Hijacking (The Gap Section)
+        const horizontalContainer = document.getElementById('horizontal-container');
+        // Total width to scroll = (Total Width - Window Width)
+        let mm = gsap.matchMedia();
+        mm.add("(min-width: 768px)", () => {
+            gsap.to(horizontalContainer, {
+                xPercent: -66.66, // 3 panels, so move 2/3rds
+                ease: "none",
+                scrollTrigger: {
+                    trigger: "#gap",
+                    pin: true,
+                    scrub: 1,
+                    end: "+=2000" // Length of scroll duration
+                }
+            });
+        });
+
+        // Standard Scroll Reveals
+        gsap.utils.toArray('.reveal-up').forEach(el => {
+            gsap.from(el, {
+                y: 80, opacity: 0, duration: 1, ease: "power3.out",
+                scrollTrigger: { trigger: el, start: "top 85%" }
+            });
+        });
+
+        gsap.utils.toArray('.arch-row').forEach((row, i) => {
+            gsap.from(row, {
+                x: -50, opacity: 0, duration: 0.8, delay: i * 0.1, ease: "power2.out",
+                scrollTrigger: { trigger: "#architecture", start: "top 60%" }
+            });
+        });
+
+        // Number Counters
+        document.querySelectorAll('.counter').forEach(counter => {
+            ScrollTrigger.create({
+                trigger: "#validation",
+                start: "top 75%",
+                once: true,
+                onEnter: () => {
+                    gsap.to(counter, {
+                        innerHTML: counter.getAttribute('data-target'),
+                        duration: 2.5, ease: "power2.out",
+                        snap: { innerHTML: 1 }
+                    });
+                }
+            });
+        });
+
     </script>
 </body>
 </html>
