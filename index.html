@@ -3,422 +3,429 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAFR // AUTONOMOUS TELEMETRY</title>
-    <!-- Tailwind CSS -->
+    <title>SAFR // NEXT-GEN TELEMETRY</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Premium Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --neon-cyan: #00f3ff;
-            --neon-volt: #ccff00;
-            --bg-dark: #030303;
+            --cyan: #00f3ff;
+            --volt: #ccff00;
+            --bg: #050505;
         }
 
-        /* Lenis Smooth Scroll Setup */
+        /* Lenis Smooth Scroll Core */
         html.lenis { height: auto; }
         .lenis.lenis-smooth { scroll-behavior: auto !important; }
         .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
         .lenis.lenis-stopped { overflow: hidden; }
-        .lenis.lenis-scrolling iframe { pointer-events: none; }
 
-        body, html {
-            margin: 0; padding: 0; width: 100%;
-            background-color: var(--bg-dark);
-            color: #ffffff;
-            font-family: 'Rajdhani', sans-serif;
-            overflow-x: hidden;
-            cursor: none;
+        body {
+            margin: 0; padding: 0; background-color: var(--bg);
+            color: #fff; font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden; cursor: none;
         }
 
-        /* Typography */
+        /* Typography & Blend Modes */
         .font-display { font-family: 'Syncopate', sans-serif; }
+        
         .text-outline {
             color: transparent;
-            -webkit-text-stroke: 1px rgba(255, 255, 255, 0.3);
-            transition: -webkit-text-stroke 0.3s ease, color 0.3s ease;
+            -webkit-text-stroke: 1px rgba(255, 255, 255, 0.4);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .text-outline:hover {
-            -webkit-text-stroke: 1px var(--neon-cyan);
             color: rgba(0, 243, 255, 0.1);
+            -webkit-text-stroke: 1px var(--cyan);
+            transform: scale(1.02);
         }
 
-        /* WebGL Layer */
+        /* WebGL & Visibility Protection overlays */
         #webgl-canvas {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: 0; pointer-events: none;
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
         }
-        .noise-overlay {
-            position: fixed; inset: 0;
-            background: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
-            opacity: 0.05; z-index: 1; pointer-events: none; mix-blend-mode: overlay;
+        .vignette {
+            position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            /* Protects text visibility in the center */
+            background: radial-gradient(circle at center, rgba(5,5,5,0.3) 0%, rgba(5,5,5,0.95) 80%);
+        }
+        .noise {
+            position: fixed; inset: 0; z-index: 2; pointer-events: none; mix-blend-mode: overlay;
+            background: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+            opacity: 0.15;
         }
 
-        /* Content Z-Index */
         #main-content { position: relative; z-index: 10; }
 
-        /* Custom Cursor */
+        /* Custom Cinematic Cursor */
         #cursor-dot {
-            position: fixed; width: 6px; height: 6px;
-            background: var(--neon-volt); border-radius: 50%;
-            transform: translate(-50%, -50%); z-index: 9999;
-            pointer-events: none; transition: background 0.2s;
+            position: fixed; width: 6px; height: 6px; background: var(--volt);
+            border-radius: 50%; transform: translate(-50%, -50%); z-index: 9999;
+            pointer-events: none; transition: width 0.2s, height 0.2s; mix-blend-mode: difference;
         }
         #cursor-ring {
-            position: fixed; width: 36px; height: 36px;
-            border: 1px solid rgba(204, 255, 0, 0.5); border-radius: 50%;
-            transform: translate(-50%, -50%); z-index: 9998;
-            pointer-events: none; transition: width 0.3s, height 0.3s, border-color 0.3s;
+            position: fixed; width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 50%; transform: translate(-50%, -50%); z-index: 9998;
+            pointer-events: none; transition: border-color 0.3s, width 0.3s, height 0.3s;
         }
 
-        /* Glitch Button */
-        .btn-glitch {
-            position: relative; background: transparent;
-            color: var(--neon-cyan); font-family: 'Syncopate', sans-serif;
-            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px;
-            padding: 12px 24px; border: 1px solid var(--neon-cyan);
-            overflow: hidden; cursor: none; transition: 0.3s;
+        /* Magnetic UI Elements */
+        .magnetic-wrap { display: inline-block; position: relative; }
+        .magnetic-area {
+            position: absolute; inset: -20px; z-index: 1;
         }
-        .btn-glitch::before {
-            content: ''; position: absolute; top: 0; left: -100%;
-            width: 100%; height: 100%; background: var(--neon-cyan);
-            transition: left 0.3s ease; z-index: -1;
+        .magnetic-content {
+            position: relative; z-index: 2; pointer-events: none;
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
-        .btn-glitch:hover::before { left: 0; }
-        .btn-glitch:hover { color: #000; font-weight: bold; }
 
-        /* Modals (Hidden by default, controlled via GSAP) */
-        .modal-overlay {
-            position: fixed; inset: 0; background: rgba(3,3,3,0.95);
-            backdrop-filter: blur(10px); z-index: 9000;
-            display: flex; justify-content: center; align-items: center;
+        /* Preloader */
+        #preloader {
+            position: fixed; inset: 0; background: var(--bg); z-index: 10000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .loader-text { font-family: 'Syncopate', sans-serif; font-size: 8vw; color: var(--cyan); }
+        .loader-sub { font-family: 'Rajdhani', monospace; color: #555; margin-top: 20px; letter-spacing: 5px; }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.6); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Modals */
+        .modal {
+            position: fixed; inset: 0; background: rgba(5,5,5,0.98); z-index: 9000;
+            display: flex; align-items: center; justify-content: center;
             opacity: 0; pointer-events: none;
         }
-        .side-panel {
-            position: fixed; top: 0; right: -100%; width: 100%; max-width: 500px;
-            height: 100vh; background: #050505; border-left: 1px solid #1a1a1a;
-            z-index: 9000; padding: 40px; overflow-y: auto;
+        .modal-inner { transform: translateY(40px); }
+
+        /* Form styling */
+        input, select {
+            background: transparent; border-bottom: 1px solid #333; color: white;
+            padding: 10px 0; outline: none; transition: border-color 0.3s;
         }
+        input:focus, select:focus { border-color: var(--cyan); }
+
+        /* Velocity Skew Class */
+        .skew-elem { will-change: transform; transform-origin: left center; }
     </style>
 </head>
 <body>
 
-    <!-- CUSTOM CURSOR -->
+    <div id="preloader">
+        <div class="loader-text" id="loader-counter">000</div>
+        <div class="loader-sub">COMPILING SAFR.OS KERNEL //</div>
+    </div>
+
     <div id="cursor-dot"></div>
     <div id="cursor-ring"></div>
 
-    <!-- WEBGL BACKGROUND (LiDAR Point Cloud) -->
     <canvas id="webgl-canvas"></canvas>
-    <div class="noise-overlay"></div>
+    <div class="vignette"></div>
+    <div class="noise"></div>
 
-    <!-- NAVIGATION -->
     <nav class="fixed top-0 w-full z-50 p-6 md:p-10 flex justify-between items-center mix-blend-difference">
-        <div class="font-display font-bold text-xl tracking-tighter text-white">
-            SF<span class="text-[#00f3ff]">_</span>R
+        <div class="magnetic-wrap">
+            <div class="magnetic-area"></div>
+            <div class="magnetic-content font-display font-bold text-xl tracking-tighter text-white">
+                SAFR<span class="text-[#00f3ff]">_</span>
+            </div>
         </div>
+        
         <div class="hidden md:flex gap-10 font-bold tracking-widest text-xs uppercase">
-            <a href="#engineering" class="hover-target text-zinc-400 hover:text-[#00f3ff] transition-colors">Architecture</a>
-            <a href="#validation" class="hover-target text-zinc-400 hover:text-[#ccff00] transition-colors" id="nav-val">Validation</a>
+            <div class="magnetic-wrap"><div class="magnetic-area"></div>
+                <a href="#engineering" class="magnetic-content text-zinc-400 hover:text-white">Architecture</a>
+            </div>
+            <div class="magnetic-wrap"><div class="magnetic-area"></div>
+                <a href="#validation" class="magnetic-content text-zinc-400 hover:text-white">Validation</a>
+            </div>
         </div>
-        <button class="hover-target btn-glitch" id="btn-init">INIT_PILOT</button>
+
+        <div class="magnetic-wrap">
+            <div class="magnetic-area" id="btn-pilot-area"></div>
+            <button id="btn-pilot" class="magnetic-content font-display text-[10px] tracking-widest uppercase border border-[#ccff00] text-[#ccff00] px-6 py-3 hover:bg-[#ccff00] hover:text-black transition-colors pointer-events-auto">
+                INIT_PILOT
+            </button>
+        </div>
     </nav>
 
-    <!-- INIT PILOT FULLSCREEN MODAL -->
-    <div class="modal-overlay" id="pilot-modal">
-        <div class="absolute top-10 right-10">
-            <button class="hover-target font-display text-xs text-zinc-500 hover:text-white uppercase tracking-widest" id="close-pilot">[ CLOSE_X ]</button>
-        </div>
-        <div class="max-w-2xl w-full p-8 modal-content translate-y-10">
-            <h2 class="font-display text-3xl font-bold text-white uppercase mb-2">Command Node</h2>
-            <p class="text-zinc-400 mb-8 font-mono text-xs uppercase tracking-widest border-b border-zinc-800 pb-4">Secure Deployment Matrix // Alpha Stage</p>
-            <form class="space-y-6">
-                <div class="grid grid-cols-2 gap-6">
-                    <input type="text" placeholder="OPERATOR ID" class="bg-transparent border border-zinc-800 p-4 text-white font-mono text-xs focus:border-[#00f3ff] outline-none hover-target w-full">
-                    <input type="text" placeholder="FACILITY COORDINATES" class="bg-transparent border border-zinc-800 p-4 text-white font-mono text-xs focus:border-[#00f3ff] outline-none hover-target w-full">
-                </div>
-                <select class="bg-transparent border border-zinc-800 p-4 text-zinc-400 font-mono text-xs focus:border-[#00f3ff] outline-none hover-target w-full appearance-none">
-                    <option class="bg-black">SELECT HAZARD PROFILE</option>
-                    <option class="bg-black">Chemical Storage (CH4 / NH3)</option>
-                    <option class="bg-black">Public Hospital / Bio-Research</option>
+    <div id="pilot-modal" class="modal">
+        <button id="close-pilot" class="absolute top-10 right-10 font-display text-xs text-zinc-500 hover:text-white pointer-events-auto">[ CLOSE ]</button>
+        <div class="modal-inner max-w-xl w-full p-8 glass-panel">
+            <h2 class="font-display text-4xl font-bold uppercase mb-2 text-white">Deploy Node</h2>
+            <p class="text-zinc-400 font-mono text-xs uppercase tracking-widest mb-8">Secure Hardware Handshake</p>
+            <form id="pilot-form" class="space-y-8 pointer-events-auto">
+                <input type="text" placeholder="OPERATOR / FACILITY ID" class="w-full font-display text-sm tracking-widest uppercase" required>
+                <select class="w-full font-display text-sm tracking-widest uppercase text-zinc-400" required>
+                    <option value="" disabled selected>SELECT HAZARD PROFILE</option>
+                    <option value="1">Chemical Warehouse (CH4 / NH3)</option>
+                    <option value="2">Logistics Hub (Particulate / Fire)</option>
+                    <option value="3">Medical Diagnostic Center</option>
                 </select>
-                <button type="button" class="btn-glitch w-full hover-target" style="border-color: var(--neon-volt); color: var(--neon-volt);">
-                    TRANSMIT SECURE HANDSHAKE
+                <button type="submit" class="w-full bg-[#ccff00] text-black font-display font-bold py-4 text-xs tracking-widest uppercase hover:bg-white transition-colors">
+                    TRANSMIT SECURE LINK
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- PRIVACY POLICY SIDE PANEL -->
-    <div class="side-panel" id="privacy-panel">
-        <button class="hover-target font-display text-xs text-zinc-500 hover:text-white uppercase tracking-widest mb-12" id="close-privacy">&larr; RETURN</button>
-        <h3 class="font-display text-2xl font-bold text-white uppercase mb-6">Data Compliance Matrix</h3>
-        <div class="space-y-6 text-zinc-400 text-sm leading-relaxed font-light">
-            <p><strong class="text-white">01. Edge Localization:</strong> All environmental spatial telemetry (Thermal, Gas levels) is processed natively on the internal computational hardware. We bypass external corporate clouds to ensure zero-latency localized anomaly detection.</p>
-            <p><strong class="text-white">02. Biometric Exclusions:</strong> Visual sensory arrays strictly map structural integrity and spatial boundaries. No personnel facial tracking or biometric storage protocols are active.</p>
-            <p><strong class="text-white">03. Network Isolation:</strong> WebSocket alerts operate exclusively on isolated facility intranets, heavily encrypted against wide-area network breaches.</p>
-        </div>
-    </div>
-
-    <!-- MAIN SCROLL CONTENT -->
     <div id="main-content">
-        
-        <!-- HERO SECTION -->
-        <section class="min-h-screen w-full flex flex-col justify-center px-6 md:px-16 relative overflow-hidden">
-            <div class="max-w-[90vw] mx-auto w-full z-10 pt-20">
-                <div class="overflow-hidden hero-line">
-                    <h1 class="font-display text-[10vw] md:text-[8vw] font-bold leading-[0.85] uppercase tracking-tighter">
-                        LiDAR-Driven
+
+        <section class="min-h-screen flex flex-col justify-center px-6 md:px-16 pt-20">
+            <div class="max-w-[90vw] mx-auto w-full">
+                <div class="overflow-hidden">
+                    <h1 class="hero-title skew-elem font-display text-[11vw] md:text-[9vw] font-bold leading-[0.85] uppercase tracking-tighter text-outline">
+                        Autonomous
                     </h1>
                 </div>
-                <div class="overflow-hidden hero-line ml-[5vw] md:ml-[10vw]">
-                    <h1 class="font-display text-[10vw] md:text-[8vw] font-bold leading-[0.85] uppercase tracking-tighter text-outline">
-                        Anomaly
+                <div class="overflow-hidden ml-[5vw] md:ml-[10vw]">
+                    <h1 class="hero-title skew-elem font-display text-[11vw] md:text-[9vw] font-bold leading-[0.85] uppercase tracking-tighter text-[#00f3ff]">
+                        LiDAR
                     </h1>
                 </div>
-                <div class="overflow-hidden hero-line ml-[10vw] md:ml-[20vw]">
-                    <h1 class="font-display text-[10vw] md:text-[8vw] font-bold leading-[0.85] uppercase tracking-tighter text-[#ccff00]">
+                <div class="overflow-hidden ml-[10vw] md:ml-[20vw]">
+                    <h1 class="hero-title skew-elem font-display text-[11vw] md:text-[9vw] font-bold leading-[0.85] uppercase tracking-tighter text-white">
                         Hunting.
                     </h1>
                 </div>
                 
-                <div class="mt-12 md:mt-20 max-w-xl ml-[10vw] md:ml-[20vw] hero-subtext opacity-0">
-                    <p class="text-lg md:text-xl text-zinc-300 font-medium leading-relaxed border-l-2 border-[#00f3ff] pl-6">
-                        An autonomous, low-cost multi-sensor platform engineered to aggressively map stagnant gas pockets and structural blind spots in zero-visibility industrial environments.
+                <div class="mt-12 md:mt-20 max-w-xl ml-[10vw] md:ml-[20vw] glass-panel p-6 border-l-4 border-[#ccff00] hero-subtext opacity-0">
+                    <p class="text-lg md:text-xl text-zinc-200 font-medium leading-relaxed">
+                        A disruptive, multi-sensor platform engineered to aggressively map stagnant gas pockets and structural blind spots in high-risk zones.
                     </p>
                 </div>
             </div>
-            
-            <!-- Scroll Indicator -->
-            <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-50">
-                <span class="font-mono text-[10px] tracking-widest text-white uppercase">Initiate Scroll</span>
-                <div class="w-[1px] h-12 bg-gradient-to-b from-white to-transparent"></div>
-            </div>
         </section>
 
-        <!-- THE DEAD ZONE (PROBLEM) -->
-        <section class="py-32 px-6 md:px-16 relative z-10 bg-gradient-to-b from-transparent to-black/80">
-            <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
-                <div class="lg:col-span-7">
-                    <h2 class="font-display text-4xl md:text-6xl font-bold uppercase tracking-tighter mb-8 gs-reveal">
-                        The Static <span class="text-outline">Illusion</span>
+        <section class="py-32 px-6 md:px-16" id="problem-sec">
+            <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16">
+                <div class="lg:h-screen flex flex-col justify-center" id="pin-content">
+                    <span class="font-display text-xs text-[#00f3ff] uppercase tracking-widest block mb-4">THE DEAD ZONE</span>
+                    <h2 class="font-display text-5xl md:text-7xl font-bold uppercase tracking-tighter mb-8 skew-elem">
+                        The Static<br><span class="text-outline">Illusion.</span>
                     </h2>
-                    <p class="text-xl text-zinc-400 mb-8 leading-relaxed font-light gs-reveal">
-                        Traditional $70,000+ stationary sensor arrays leave up to <span class="text-white font-bold">40% of localized facilities unmonitored</span>. Gas migration physics block static nodes, allowing thermal escalations and toxic pooling to go undetected between manual audits.
+                    <p class="text-xl text-zinc-400 leading-relaxed max-w-md">
+                        $70,000+ stationary sensor arrays leave up to <span class="text-white font-bold">40% of localized facilities unmonitored</span>. Gas migration physics block static nodes, allowing toxic pooling to cascade undetected.
                     </p>
-                </div>
-                <div class="lg:col-span-5 flex flex-col gap-6">
-                    <div class="border border-zinc-800 bg-zinc-950/50 backdrop-blur-md p-8 gs-reveal hover-target transition-all hover:border-[#00f3ff]">
-                        <div class="text-[#00f3ff] font-mono text-xs tracking-widest mb-4">// CONSTRAINT 01</div>
-                        <h3 class="text-xl font-bold uppercase mb-2">Micro-Spatial Blindness</h3>
-                    </div>
-                    <div class="border border-zinc-800 bg-zinc-950/50 backdrop-blur-md p-8 gs-reveal hover-target transition-all hover:border-[#ccff00]">
-                        <div class="text-[#ccff00] font-mono text-xs tracking-widest mb-4">// CONSTRAINT 02</div>
-                        <h3 class="text-xl font-bold uppercase mb-2">Capital Exclusions</h3>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ENGINEERING ARCHITECTURE -->
-        <section id="engineering" class="py-32 px-6 md:px-16 bg-[#030303] border-t border-zinc-900">
-            <div class="max-w-7xl mx-auto">
-                <div class="mb-20 text-center">
-                    <span class="font-mono text-xs text-[#00f3ff] tracking-widest uppercase block mb-4">Hardware Matrix</span>
-                    <h2 class="font-display text-4xl md:text-6xl font-bold uppercase tracking-tighter">System Architecture</h2>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <!-- Spec 1 -->
-                    <div class="border-t border-zinc-800 pt-6 gs-spec">
-                        <span class="font-mono text-[10px] text-zinc-600 block mb-2">[ CORE ENGINE ]</span>
-                        <h4 class="font-display text-lg font-bold uppercase mb-4 text-white">Raspberry Pi 4 8GB</h4>
-                        <p class="text-zinc-400 font-light text-sm">Isolated, high-throughput on-device analytics powering rapid sensor data ingestion without external cloud lag.</p>
+                <div class="flex flex-col gap-12 lg:pt-[30vh] pb-[30vh]">
+                    <div class="glass-panel p-10 reveal-card hover:border-[#ccff00] transition-colors">
+                        <div class="text-[5rem] font-display text-zinc-800 absolute right-4 top-0 leading-none">01</div>
+                        <h3 class="text-2xl font-bold uppercase mb-4 relative z-10">Micro-Spatial Blindness</h3>
+                        <p class="text-zinc-400 relative z-10">Stagnant air pockets and architectural barriers render stationary sensors entirely useless in complex facility layouts.</p>
                     </div>
-                    <!-- Spec 2 -->
-                    <div class="border-t border-zinc-800 pt-6 gs-spec">
-                        <span class="font-mono text-[10px] text-zinc-600 block mb-2">[ SENSORY FUSION ]</span>
-                        <h4 class="font-display text-lg font-bold uppercase mb-4 text-white">8-Node Spatial Array</h4>
-                        <p class="text-zinc-400 font-light text-sm">Continuous localized mapping of critical variants including CH4, NH3, H2S, and CO2 mapped directly to facility geometry.</p>
-                    </div>
-                    <!-- Spec 3 -->
-                    <div class="border-t border-zinc-800 pt-6 gs-spec">
-                        <span class="font-mono text-[10px] text-zinc-600 block mb-2">[ VISUAL/THERMAL ]</span>
-                        <h4 class="font-display text-lg font-bold uppercase mb-4 text-white">MLX90640 Mesh</h4>
-                        <p class="text-zinc-400 font-light text-sm">Overlays invisible thermal heatmaps onto standard visual streams to isolate pre-combustion stress fractures instantly.</p>
+                    <div class="glass-panel p-10 reveal-card hover:border-[#00f3ff] transition-colors">
+                        <div class="text-[5rem] font-display text-zinc-800 absolute right-4 top-0 leading-none">02</div>
+                        <h3 class="text-2xl font-bold uppercase mb-4 relative z-10">Capital Exclusions</h3>
+                        <p class="text-zinc-400 relative z-10">Premium autonomous safety robotics deploy at steep acquisition brackets, isolating small to mid-sized units from enterprise safety.</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- NEW: FIELD VALIDATION (Fixes dead link) -->
-        <section id="validation" class="py-40 px-6 md:px-16 bg-black relative">
+        <section id="engineering" class="py-32 px-6 md:px-16 border-t border-zinc-900 bg-black/50">
             <div class="max-w-7xl mx-auto">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                    <div>
-                        <h2 class="font-display text-5xl md:text-7xl font-bold uppercase tracking-tighter mb-6 gs-reveal">
-                            Pilot <span class="text-[#ccff00]">Proven.</span>
-                        </h2>
-                        <p class="text-zinc-400 leading-relaxed font-light max-w-md gs-reveal">
-                            Deployed and validated in real-world high-risk environments, specifically targeted along the Haryana Emergency Hospital validation track.
-                        </p>
+                <h2 class="font-display text-5xl md:text-7xl font-bold uppercase tracking-tighter text-center mb-24 skew-elem">
+                    Hardware <span class="text-[#ccff00]">Matrix</span>
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="glass-panel p-8 gs-spec hover:-translate-y-2 transition-transform">
+                        <h4 class="font-display text-xl font-bold uppercase mb-4 text-[#00f3ff]">R-Pi 4 Core</h4>
+                        <p class="text-zinc-400 font-medium text-sm">Isolated, high-throughput on-device analytics powering rapid data ingestion without external cloud lag.</p>
                     </div>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-zinc-900 border border-zinc-900 gs-reveal">
-                        <div class="bg-black p-10 flex flex-col justify-center items-center text-center hover-target">
-                            <span class="font-display text-5xl font-bold text-white mb-2">100%</span>
-                            <span class="font-mono text-[10px] text-zinc-500 tracking-widest uppercase">Blindspot Closure</span>
-                        </div>
-                        <div class="bg-black p-10 flex flex-col justify-center items-center text-center hover-target">
-                            <span class="font-display text-5xl font-bold text-[#00f3ff] mb-2">&lt;5s</span>
-                            <span class="font-mono text-[10px] text-zinc-500 tracking-widest uppercase">Telemetry Lag</span>
-                        </div>
-                        <div class="bg-black p-10 flex flex-col justify-center items-center text-center sm:col-span-2 hover-target">
-                            <span class="font-display text-5xl font-bold text-[#ccff00] mb-2">$150-$250</span>
-                            <span class="font-mono text-[10px] text-zinc-500 tracking-widest uppercase">Disruptive Hardware Assembly Cost</span>
-                        </div>
+                    <div class="glass-panel p-8 gs-spec hover:-translate-y-2 transition-transform">
+                        <h4 class="font-display text-xl font-bold uppercase mb-4 text-white">8-Node Array</h4>
+                        <p class="text-zinc-400 font-medium text-sm">Continuous mapping of variants including CH4, NH3, H2S, and CO2 directly to facility geometry.</p>
+                    </div>
+                    <div class="glass-panel p-8 gs-spec hover:-translate-y-2 transition-transform">
+                        <h4 class="font-display text-xl font-bold uppercase mb-4 text-[#ccff00]">MLX90640 Mesh</h4>
+                        <p class="text-zinc-400 font-medium text-sm">Overlays invisible thermal heatmaps onto standard visual streams to isolate pre-combustion stress.</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- FOOTER -->
-        <footer class="py-16 px-6 md:px-16 border-t border-zinc-900 bg-[#020202]">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+        <section id="validation" class="py-32 px-6 md:px-16 border-t border-zinc-900 relative">
+            <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                 <div>
-                    <h1 class="font-display font-bold text-3xl uppercase tracking-tighter text-outline">SAFR_</h1>
+                    <h2 class="font-display text-5xl md:text-7xl font-bold uppercase tracking-tighter mb-6 skew-elem">
+                        Pilot <span class="text-outline">Proven.</span>
+                    </h2>
+                    <p class="text-zinc-400 leading-relaxed font-medium">
+                        Validated in real-world high-risk environments along the Haryana Emergency Hospital tracking route. Disrupting industry baselines.
+                    </p>
                 </div>
-                <div class="flex gap-8 font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
-                    <button id="btn-privacy" class="hover-target hover:text-white transition-colors">Data Privacy</button>
-                    <span>&copy; 2026 SAFR LOGS</span>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="glass-panel p-8 flex flex-col items-center justify-center text-center">
+                        <div class="text-5xl font-display font-bold text-white mb-2"><span class="counter" data-target="100">0</span>%</div>
+                        <span class="font-mono text-[10px] text-zinc-500 uppercase tracking-widest">Blindspot Closure</span>
+                    </div>
+                    <div class="glass-panel p-8 flex flex-col items-center justify-center text-center">
+                        <div class="text-5xl font-display font-bold text-[#00f3ff] mb-2"><span class="counter" data-target="5">0</span>s</div>
+                        <span class="font-mono text-[10px] text-zinc-500 uppercase tracking-widest">Telemetry Lag</span>
+                    </div>
+                    <div class="glass-panel p-8 flex flex-col items-center justify-center text-center col-span-2">
+                        <div class="text-5xl font-display font-bold text-[#ccff00] mb-2">$<span class="counter" data-target="150">0</span></div>
+                        <span class="font-mono text-[10px] text-zinc-500 uppercase tracking-widest">Disruptive Prototype Assembly Cost</span>
+                    </div>
                 </div>
+            </div>
+        </section>
+
+        <footer class="py-12 px-6 md:px-16 border-t border-zinc-900 bg-[#020202]">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <h1 class="font-display font-bold text-2xl uppercase tracking-tighter text-zinc-600">SAFR_</h1>
+                <span class="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">&copy; 2026 SAFR LOGS</span>
             </div>
         </footer>
 
     </div>
 
-    <!-- SCRIPTS -->
     <script src="https://unpkg.com/@studio-freight/lenis@1.0.33/dist/lenis.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
     
     <script>
-        // === 1. LENIS SMOOTH SCROLL ===
-        const lenis = new Lenis({
-            duration: 1.2,
-            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-            direction: 'vertical',
-            gestureDirection: 'vertical',
-            smooth: true,
-            mouseMultiplier: 1,
-            smoothTouch: false,
-            touchMultiplier: 2,
-        });
-
-        function raf(time) {
-            lenis.raf(time);
-            requestAnimationFrame(raf);
-        }
-        requestAnimationFrame(raf);
-
-        // Connect Lenis to GSAP ScrollTrigger
         gsap.registerPlugin(ScrollTrigger);
+
+        // ==========================================
+        // 1. PRELOADER & BOOT SEQUENCE
+        // ==========================================
+        const counterElement = document.getElementById('loader-counter');
+        let count = 0;
+        
+        // Fast fake loader
+        let loaderInterval = setInterval(() => {
+            count += Math.floor(Math.random() * 10) + 1;
+            if (count >= 100) {
+                count = 100;
+                clearInterval(loaderInterval);
+                completeBoot();
+            }
+            // Format to 3 digits (e.g., 045, 100)
+            counterElement.innerText = count.toString().padStart(3, '0');
+        }, 40);
+
+        function completeBoot() {
+            gsap.to('#preloader', {
+                yPercent: -100, duration: 1, ease: "power4.inOut", delay: 0.2,
+                onComplete: initHeroAnimations
+            });
+        }
+
+        // ==========================================
+        // 2. LENIS SMOOTH SCROLL
+        // ==========================================
+        const lenis = new Lenis({
+            duration: 1.5,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            direction: 'vertical', smooth: true
+        });
+        
         lenis.on('scroll', ScrollTrigger.update);
         gsap.ticker.add((time)=>{ lenis.raf(time * 1000) });
         gsap.ticker.lagSmoothing(0);
 
-        // Smooth scroll for nav links
+        // Scroll to anchors
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
-                lenis.scrollTo(this.getAttribute('href'), { offset: -50, duration: 1.5 });
+                lenis.scrollTo(this.getAttribute('href'), { offset: -100, duration: 1.5 });
             });
         });
 
-        // === 2. CUSTOM CURSOR ===
+        // ==========================================
+        // 3. MAGNETIC UI & CUSTOM CURSOR
+        // ==========================================
         const cursorDot = document.getElementById('cursor-dot');
         const cursorRing = document.getElementById('cursor-ring');
-        let mouseX = window.innerWidth / 2;
-        let mouseY = window.innerHeight / 2;
-        let dotX = mouseX, dotY = mouseY;
-        let ringX = mouseX, ringY = mouseY;
+        let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+        let dotX = mouseX, dotY = mouseY, ringX = mouseX, ringY = mouseY;
 
         window.addEventListener('mousemove', (e) => {
             mouseX = e.clientX; mouseY = e.clientY;
         });
 
-        function renderCursor() {
-            dotX += (mouseX - dotX) * 0.2;
-            dotY += (mouseY - dotY) * 0.2;
-            ringX += (mouseX - ringX) * 0.1;
-            ringY += (mouseY - ringY) * 0.1;
-
+        function animateCursor() {
+            dotX += (mouseX - dotX) * 0.25; dotY += (mouseY - dotY) * 0.25;
+            ringX += (mouseX - ringX) * 0.15; ringY += (mouseY - ringY) * 0.15;
             cursorDot.style.left = `${dotX}px`; cursorDot.style.top = `${dotY}px`;
             cursorRing.style.left = `${ringX}px`; cursorRing.style.top = `${ringY}px`;
-            requestAnimationFrame(renderCursor);
+            requestAnimationFrame(animateCursor);
         }
-        renderCursor();
+        animateCursor();
 
-        // Hover States
-        document.querySelectorAll('.hover-target, a, button, input, select').forEach(el => {
-            el.addEventListener('mouseenter', () => {
-                cursorDot.style.background = '#00f3ff';
-                cursorRing.style.borderColor = 'rgba(0, 243, 255, 0.8)';
+        // Magnetic Logic
+        document.querySelectorAll('.magnetic-wrap').forEach(wrap => {
+            const area = wrap.querySelector('.magnetic-area');
+            const content = wrap.querySelector('.magnetic-content');
+            
+            area.addEventListener('mousemove', (e) => {
+                const rect = area.getBoundingClientRect();
+                const relX = e.clientX - rect.left - rect.width / 2;
+                const relY = e.clientY - rect.top - rect.height / 2;
+                
+                gsap.to(content, { x: relX * 0.4, y: relY * 0.4, duration: 0.3, ease: "power2.out" });
                 cursorRing.style.width = '60px'; cursorRing.style.height = '60px';
+                cursorRing.style.borderColor = 'var(--cyan)';
             });
-            el.addEventListener('mouseleave', () => {
-                cursorDot.style.background = '#ccff00';
-                cursorRing.style.borderColor = 'rgba(204, 255, 0, 0.5)';
-                cursorRing.style.width = '36px'; cursorRing.style.height = '36px';
+            
+            area.addEventListener('mouseleave', () => {
+                gsap.to(content, { x: 0, y: 0, duration: 0.7, ease: "elastic.out(1, 0.3)" });
+                cursorRing.style.width = '40px'; cursorRing.style.height = '40px';
+                cursorRing.style.borderColor = 'rgba(255,255,255,0.5)';
             });
         });
 
-        // === 3. THREE.JS: VOLUMETRIC GAS LiDAR CLOUD ===
+        // Hover states for other elements
+        document.querySelectorAll('input, select, .reveal-card, .gs-spec').forEach(el => {
+            el.addEventListener('mouseenter', () => cursorDot.style.transform = 'translate(-50%, -50%) scale(2)');
+            el.addEventListener('mouseleave', () => cursorDot.style.transform = 'translate(-50%, -50%) scale(1)');
+        });
+
+        // ==========================================
+        // 4. OPTIMIZED THREE.JS (Lag Fixed)
+        // ==========================================
         const canvas = document.getElementById('webgl-canvas');
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x030303, 0.0015);
-
+        
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-        camera.position.z = 200;
+        camera.position.z = 250; // Pushed back for visibility
 
-        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        // Antialias FALSE dramatically improves performance for point clouds
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-        // Create Point Cloud (Gas Particles)
-        const particleCount = 15000;
+        // Reduced particle count from 15,000 to 6,000 for 60FPS lock
+        const particleCount = 6000;
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         const originalPositions = new Float32Array(particleCount * 3);
-        const colors = new Float32Array(particleCount * 3);
-
-        const colorBase = new THREE.Color(0x00f3ff); // Cyan
-        const colorHighlight = new THREE.Color(0xccff00); // Volt
-
+        
         for(let i = 0; i < particleCount; i++) {
             const i3 = i * 3;
-            // Generate in a volumetric box
-            const x = (Math.random() - 0.5) * 500;
-            const y = (Math.random() - 0.5) * 300;
-            const z = (Math.random() - 0.5) * 300;
+            const x = (Math.random() - 0.5) * 600;
+            const y = (Math.random() - 0.5) * 400;
+            const z = (Math.random() - 0.5) * 200; // Flatter depth
             
             positions[i3] = x; positions[i3+1] = y; positions[i3+2] = z;
             originalPositions[i3] = x; originalPositions[i3+1] = y; originalPositions[i3+2] = z;
-
-            // Mix colors slightly
-            const mixedColor = colorBase.clone().lerp(colorHighlight, Math.random() * 0.3);
-            colors[i3] = mixedColor.r; colors[i3+1] = mixedColor.g; colors[i3+2] = mixedColor.b;
         }
 
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
         const material = new THREE.PointsMaterial({
-            size: 1.5,
-            vertexColors: true,
+            size: 2.5,
+            color: 0x00f3ff,
             transparent: true,
-            opacity: 0.6,
+            opacity: 0.4,
             blending: THREE.AdditiveBlending,
             depthWrite: false
         });
@@ -426,81 +433,54 @@
         const particles = new THREE.Points(geometry, material);
         scene.add(particles);
 
-        // Scanner Plane (LiDAR simulation)
-        const scanGeo = new THREE.PlaneGeometry(800, 2);
-        const scanMat = new THREE.MeshBasicMaterial({ 
-            color: 0xccff00, transparent: true, opacity: 0.1, 
-            blending: THREE.AdditiveBlending, side: THREE.DoubleSide
-        });
-        const scannerPlane = new THREE.Mesh(scanGeo, scanMat);
-        scannerPlane.rotation.x = Math.PI / 2;
-        scene.add(scannerPlane);
-
-        // Interaction Logic
         const clock = new THREE.Clock();
-        
-        // Raycaster for mouse repulsion
-        const mouseVector = new THREE.Vector3();
         
         function animateWebGL() {
             requestAnimationFrame(animateWebGL);
             const time = clock.getElapsedTime();
 
-            // Rotate the entire cloud slowly
-            particles.rotation.y = time * 0.02;
-            particles.rotation.x = Math.sin(time * 0.05) * 0.1;
+            // Slower, grander rotation
+            particles.rotation.y = time * 0.05;
+            particles.rotation.x = Math.sin(time * 0.02) * 0.05;
 
-            // Scanner motion (sweeping up and down)
-            scannerPlane.position.y = Math.sin(time * 1.5) * 150;
+            // Highly optimized mouse repulsion (No Math.sqrt, no Vector3 instancing in loop)
+            // Transform mouse to rough world coordinates
+            const mX = (mouseX / window.innerWidth) * 2 - 1;
+            const mY = -(mouseY / window.innerHeight) * 2 + 1;
+            const targetX = mX * 250;
+            const targetY = mY * 150;
 
-            // Calculate normalized mouse coords for 3D mapping
-            const normX = (mouseX / window.innerWidth) * 2 - 1;
-            const normY = -(mouseY / window.innerHeight) * 2 + 1;
+            const pos = geometry.attributes.position.array;
+            const orig = originalPositions;
             
-            // Map mouse to 3D space roughly
-            mouseVector.set(normX * 200, normY * 150, 50);
-
-            // Animate vertices (Fluid motion + Mouse Repulsion)
-            const posAttr = geometry.attributes.position;
-            const origAttr = originalPositions;
-            
-            for(let i=0; i<particleCount; i++) {
-                const i3 = i*3;
-                let px = posAttr.array[i3];
-                let py = posAttr.array[i3+1];
-                let pz = posAttr.array[i3+2];
+            for(let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                let px = pos[i3];
+                let py = pos[i3+1];
                 
-                const ox = origAttr[i3];
-                const oy = origAttr[i3+1];
-                const oz = origAttr[i3+2];
+                const ox = orig[i3];
+                const oy = orig[i3+1];
 
-                // Base fluid drift
-                px = ox + Math.sin(time * 0.5 + oy * 0.01) * 10;
-                py = oy + Math.cos(time * 0.5 + ox * 0.01) * 10;
+                // Fast fluid drift
+                px = ox + Math.sin(time * 0.5 + oy * 0.02) * 5;
+                py = oy + Math.cos(time * 0.5 + ox * 0.02) * 5;
 
-                // Mouse Repulsion
-                // Convert particle pos to world pos to check distance
-                const pVec = new THREE.Vector3(px, py, pz);
-                pVec.applyMatrix4(particles.matrixWorld);
+                // Squared distance check is incredibly fast
+                const dx = px - targetX;
+                const dy = py - targetY;
+                const distSq = dx*dx + dy*dy;
                 
-                const dist = pVec.distanceTo(mouseVector);
-                if(dist < 80) {
-                    const force = (80 - dist) * 0.05;
-                    const dir = pVec.sub(mouseVector).normalize().multiplyScalar(force);
-                    px += dir.x;
-                    py += dir.y;
-                    pz += dir.z;
+                if(distSq < 10000) { // 100 radius squared
+                    const force = (10000 - distSq) * 0.000015;
+                    px += dx * force;
+                    py += dy * force;
                 }
 
-                posAttr.array[i3] = px;
-                posAttr.array[i3+1] = py;
-                posAttr.array[i3+2] = pz;
+                pos[i3] = px; pos[i3+1] = py;
             }
-            posAttr.needsUpdate = true;
+            geometry.attributes.position.needsUpdate = true;
 
-            // Camera subtle parallax on scroll
-            camera.position.y = -(window.scrollY * 0.05);
-
+            camera.position.y = -(window.scrollY * 0.05); // Parallax
             renderer.render(scene, camera);
         }
         animateWebGL();
@@ -511,62 +491,91 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // === 4. GSAP ANIMATIONS ===
-        // Hero staggered text reveal
-        gsap.from(".hero-line h1", {
-            yPercent: 120, opacity: 0, duration: 1.5,
-            stagger: 0.15, ease: "power4.out", delay: 0.2
-        });
-        gsap.to(".hero-subtext", {
-            opacity: 1, duration: 1, delay: 1.2, ease: "power2.out"
+        // ==========================================
+        // 5. GSAP KINETIC ANIMATIONS & AWWWARDS FX
+        // ==========================================
+        
+        function initHeroAnimations() {
+            gsap.from(".hero-title", {
+                yPercent: 120, opacity: 0, duration: 1.5,
+                stagger: 0.1, ease: "power4.out"
+            });
+            gsap.to(".hero-subtext", { opacity: 1, duration: 1, delay: 0.8, ease: "power2.out" });
+        }
+
+        // VELOCITY SKEW EFFECT (The Lando Norris text warp)
+        let proxy = { skew: 0 }, skewSetter = gsap.quickSetter(".skew-elem", "skewY", "deg"), clamp = gsap.utils.clamp(-12, 12);
+        ScrollTrigger.create({
+            onUpdate: (self) => {
+                let skew = clamp(self.getVelocity() / -150);
+                if (Math.abs(skew) > Math.abs(proxy.skew)) {
+                    proxy.skew = skew;
+                    gsap.to(proxy, { skew: 0, duration: 0.8, ease: "power3", overwrite: true, onUpdate: () => skewSetter(proxy.skew) });
+                }
+            }
         });
 
-        // Scroll reveals for sections
-        gsap.utils.toArray('.gs-reveal').forEach(el => {
-            gsap.from(el, {
-                y: 60, opacity: 0, duration: 1,
-                ease: "power3.out",
-                scrollTrigger: {
-                    trigger: el, start: "top 85%", toggleActions: "play none none reverse"
+        // GSAP PINNING (Section locks while content scrolls)
+        ScrollTrigger.create({
+            trigger: "#problem-sec",
+            start: "top top",
+            end: "bottom bottom",
+            pin: "#pin-content",
+            pinSpacing: false
+        });
+
+        // Staggered Reveals
+        gsap.utils.toArray('.reveal-card').forEach(card => {
+            gsap.from(card, {
+                y: 100, opacity: 0, duration: 1, ease: "power3.out",
+                scrollTrigger: { trigger: card, start: "top 85%" }
+            });
+        });
+
+        gsap.from('.gs-spec', {
+            y: 50, opacity: 0, duration: 0.8, stagger: 0.2, ease: "power2.out",
+            scrollTrigger: { trigger: "#engineering", start: "top 70%" }
+        });
+
+        // NUMBER COUNTERS (Validation Section)
+        document.querySelectorAll('.counter').forEach(counter => {
+            ScrollTrigger.create({
+                trigger: "#validation",
+                start: "top 70%",
+                once: true,
+                onEnter: () => {
+                    gsap.to(counter, {
+                        innerHTML: counter.getAttribute('data-target'),
+                        duration: 2, ease: "power2.out",
+                        snap: { innerHTML: 1 } // Snaps to whole numbers
+                    });
                 }
             });
         });
 
-        // Spec cards stagger
-        gsap.from('.gs-spec', {
-            y: 30, opacity: 0, duration: 0.8, stagger: 0.2,
-            ease: "power2.out",
-            scrollTrigger: {
-                trigger: "#engineering", start: "top 70%"
-            }
-        });
-
-        // === 5. INTERACTIVE MODALS (Fixing the dead links) ===
-        const pilotModal = document.getElementById('pilot-modal');
-        const privacyPanel = document.getElementById('privacy-panel');
+        // ==========================================
+        // 6. MODAL LOGIC (Fixing dead buttons)
+        // ==========================================
+        const modal = document.getElementById('pilot-modal');
+        const modalInner = document.querySelector('.modal-inner');
         
-        // Pilot Modal
-        document.getElementById('btn-init').addEventListener('click', () => {
-            lenis.stop(); // Pause scroll
-            pilotModal.style.pointerEvents = 'auto';
-            gsap.to(pilotModal, { opacity: 1, duration: 0.4, ease: "power2.out" });
-            gsap.to('.modal-content', { y: 0, opacity: 1, duration: 0.6, delay: 0.1, ease: "power3.out" });
-        });
-        document.getElementById('close-pilot').addEventListener('click', () => {
-            gsap.to('.modal-content', { y: 20, opacity: 0, duration: 0.3 });
-            gsap.to(pilotModal, { opacity: 0, duration: 0.4, delay: 0.1, onComplete: () => {
-                pilotModal.style.pointerEvents = 'none';
-                lenis.start();
-            }});
+        document.getElementById('btn-pilot-area').addEventListener('click', () => {
+            lenis.stop();
+            gsap.to(modal, { opacity: 1, pointerEvents: 'auto', duration: 0.4, ease: "power2.out" });
+            gsap.to(modalInner, { y: 0, duration: 0.6, delay: 0.1, ease: "power3.out" });
         });
 
-        // Privacy Panel
-        document.getElementById('btn-privacy').addEventListener('click', () => {
-            lenis.stop();
-            gsap.to(privacyPanel, { right: 0, duration: 0.7, ease: "expo.out" });
+        document.getElementById('close-pilot').addEventListener('click', () => {
+            gsap.to(modalInner, { y: 40, duration: 0.3, ease: "power2.in" });
+            gsap.to(modal, { opacity: 0, pointerEvents: 'none', duration: 0.4, delay: 0.1, onComplete: () => lenis.start() });
         });
-        document.getElementById('close-privacy').addEventListener('click', () => {
-            gsap.to(privacyPanel, { right: "-100%", duration: 0.5, ease: "power2.inOut", onComplete: () => lenis.start() });
+
+        document.getElementById('pilot-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.innerHTML = "CONNECTION ESTABLISHED //";
+            btn.style.backgroundColor = "white";
+            setTimeout(() => document.getElementById('close-pilot').click(), 1500);
         });
 
     </script>
